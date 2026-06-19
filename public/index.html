@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VinoVibe</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--dark:#100E18;--garnet:#6B1E32;--gold:#C4A35A;--cream:#F5F2EE;--ink:#1A1720;--smoke:#8A8590;--white:#FAFAF8;--border:#E4E0D8}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+nav{background:var(--dark);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--cream)}.nav-logo span{color:var(--gold);font-style:italic}
+.nav-mode{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:50px;padding:3px}
+.mode-btn{padding:5px 14px;border:none;border-radius:50px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;background:transparent;color:rgba(245,242,238,.5);transition:all .2s}
+.mode-btn.active{background:var(--garnet);color:var(--cream)}
+.tabs-bar{background:var(--white);border-bottom:1px solid var(--border);padding:0 16px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:12px 16px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--smoke);border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab-btn.active{color:var(--garnet);border-bottom-color:var(--garnet)}
+.page{display:none;padding:24px 20px;max-width:1000px;margin:0 auto}
+.page.active{display:block}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--dark);margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--smoke);margin-bottom:24px}
+.card{background:var(--white);border-radius:14px;padding:20px;border:1px solid var(--border);margin-bottom:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.kpi{background:var(--dark);border-radius:12px;padding:16px;color:var(--cream)}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:2px}
+.kpi-lbl{font-size:10px;color:rgba(245,242,238,.45);letter-spacing:.1em;text-transform:uppercase}
+.table-wrap{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--dark);color:var(--cream);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:10px 14px;text-align:left}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--cream)}
+.badge{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.badge-nuevo{background:#FFF3DC;color:#E8A020}
+.badge-listo{background:#EBF5EB;color:#256B25}
+.badge-entregado{background:#F0F0F0;color:#888}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+label{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--smoke)}
+input,select,textarea{padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--white);color:var(--ink);outline:none;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:60px}
+.btn{padding:9px 18px;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--dark);color:var(--cream)}
+.btn-primary:hover{background:var(--garnet)}
+.btn-gold{background:var(--gold);color:var(--dark)}
+.btn-danger{background:#FFF0F0;color:#C0392B;border:1px solid #FFCDD2}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.sommelier-card{background:var(--dark);border-radius:16px;padding:24px;color:var(--cream);margin-bottom:16px;border:1px solid rgba(196,163,90,.2)}
+.slider-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.slider-top{display:flex;justify-content:space-between;margin-bottom:2px}
+.slider-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,242,238,.5)}
+.slider-val{font-size:13px;font-weight:500;color:var(--gold)}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.15);outline:none;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer}
+.resultado-ia{background:rgba(255,255,255,.06);border-radius:12px;padding:18px;border:1px solid rgba(196,163,90,.15);margin-top:14px}
+.match-badge{display:inline-block;background:rgba(196,163,90,.2);color:var(--gold);font-size:11px;font-weight:600;padding:3px 10px;border-radius:50px;margin-bottom:8px}
+.loading{display:none;text-align:center;padding:16px;color:rgba(245,242,238,.6);font-size:12px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.perfil-hero{background:linear-gradient(135deg,var(--dark) 0%,#1C1428 100%);border-radius:16px;padding:24px;color:var(--cream);margin-bottom:16px;border:1px solid rgba(196,163,90,.15)}
+.perfil-nombre{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;margin-bottom:4px}
+.perfil-tipo{font-size:12px;color:var(--gold);margin-bottom:16px;letter-spacing:.06em}
+.taste-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.taste-item{display:flex;flex-direction:column;gap:4px}
+.taste-lbl{font-size:10px;color:rgba(245,242,238,.5);letter-spacing:.08em;text-transform:uppercase}
+.taste-track{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.taste-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
+.cata-card{background:var(--white);border-radius:12px;padding:16px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
+.cata-bottle{width:36px;height:52px;background:linear-gradient(180deg,#2E0E1C 0%,#160810 100%);border-radius:6px 6px 3px 3px;flex-shrink:0;position:relative}
+.cata-bottle::before{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:10px;height:10px;background:#2E0E1C;border-radius:3px 3px 0 0}
+.cata-info{flex:1}
+.cata-nombre{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;color:var(--ink);margin-bottom:2px}
+.cata-bodega{font-size:11px;color:var(--smoke);margin-bottom:6px}
+.cata-nota{font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:6px}
+.cata-stars{color:var(--gold);font-size:14px;margin-bottom:4px}
+.cata-fecha{font-size:10px;color:var(--smoke)}
+.onboarding{background:var(--dark);border-radius:16px;padding:28px;color:var(--cream);margin-bottom:16px}
+.ob-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:6px}
+.ob-sub{font-size:12px;color:rgba(245,242,238,.45);margin-bottom:20px}
+.ob-pregunta{margin-bottom:18px}
+.ob-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,242,238,.5);margin-bottom:8px}
+.ob-opciones{display:flex;flex-wrap:wrap;gap:8px}
+.ob-opcion{padding:7px 14px;border-radius:50px;border:1px solid rgba(255,255,255,.15);font-size:12px;cursor:pointer;color:rgba(245,242,238,.7);background:transparent;transition:all .2s;font-family:'DM Sans',sans-serif}
+.ob-opcion.sel{background:var(--garnet);border-color:var(--garnet);color:var(--cream)}
+.stars-input{display:flex;gap:4px}
+.star-btn{font-size:22px;cursor:pointer;color:rgba(0,0,0,.2);transition:color .15s;background:none;border:none}
+.star-btn.on{color:var(--gold)}
+.stock-alert{background:#FFF3DC;border:1px solid #F4A400;border-radius:10px;padding:10px 14px;font-size:12px;color:#8B5E00;margin-bottom:10px}
+.vino-card{background:var(--white);border-radius:14px;padding:18px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
+.vino-bottle{width:44px;height:64px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative}
+.vino-bottle::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0}
+@media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.taste-bars{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Vino<span>Vibe</span></div>
+  <div class="nav-mode">
+    <button class="mode-btn active" onclick="setMode('vinoteca',this)">🏪 Vinoteca</button>
+    <button class="mode-btn" onclick="setMode('consumidor',this)">🍷 Consumidor</button>
+  </div>
+</nav>
+<div class="tabs-bar" id="tabs-bar"></div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="page-title">Dashboard</div>
+  <div class="page-sub">Resumen del día</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val" id="kpi-ventas">$0</div><div class="kpi-lbl">Ventas hoy</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-pedidos">0</div><div class="kpi-lbl">Pedidos hoy</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-vinos">0</div><div class="kpi-lbl">Vinos catálogo</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-clientes">0</div><div class="kpi-lbl">Clientes</div></div>
+  </div>
+  <div id="stock-alertas"></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Estado</th></tr></thead>
+    <tbody id="tabla-pedidos-recientes"></tbody>
+  </table></div>
+</div>
+
+<!-- VINOS -->
+<div id="page-vinos" class="page">
+  <div class="page-title">Catálogo de Vinos</div>
+  <div class="page-sub">Gestioná tu inventario</div>
+  <div class="card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar vino</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre</label><input id="v-nombre" placeholder="Malbec Reserva"></div>
+      <div class="form-group"><label>Bodega</label><input id="v-bodega" placeholder="Achaval Ferrer"></div>
+      <div class="form-group"><label>Región</label><input id="v-region" placeholder="Mendoza"></div>
+      <div class="form-group"><label>Varietal</label><input id="v-varietal" placeholder="Malbec"></div>
+      <div class="form-group"><label>Añada</label><input id="v-anada" type="number" placeholder="2021"></div>
+      <div class="form-group"><label>Precio ($)</label><input id="v-precio" type="number" placeholder="3200"></div>
+      <div class="form-group"><label>Stock</label><input id="v-stock" type="number" placeholder="24"></div>
+      <div class="form-group"><label>Tanino (1-10)</label><input id="v-tanino" type="number" min="1" max="10" placeholder="7"></div>
+      <div class="form-group"><label>Acidez (1-10)</label><input id="v-acidez" type="number" min="1" max="10" placeholder="5"></div>
+      <div class="form-group"><label>Cuerpo (1-10)</label><input id="v-cuerpo" type="number" min="1" max="10" placeholder="8"></div>
+      <div class="form-group"><label>Dulzor (1-10)</label><input id="v-dulzor" type="number" min="1" max="10" placeholder="2"></div>
+      <div class="form-group full"><label>Descripción</label><textarea id="v-descripcion" placeholder="Notas de cata..."></textarea></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="agregarVino()">Agregar vino</button></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Vino</th><th>Bodega</th><th>Varietal</th><th>Añada</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+    <tbody id="tabla-vinos"></tbody>
+  </table></div>
+</div>
+
+<!-- PEDIDOS -->
+<div id="page-pedidos" class="page">
+  <div class="page-title">Pedidos</div>
+  <div class="page-sub">Gestioná los pedidos</div>
+  <div class="card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Nuevo pedido</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Cliente</label><input id="p-cliente" placeholder="Nombre del cliente"></div>
+      <div class="form-group"><label>Tipo</label><select id="p-tipo"><option value="retiro">🏪 Click & Collect</option><option value="envio">🚚 Envío</option></select></div>
+      <div class="form-group full"><label>Vino</label><select id="p-vino-sel"></select></div>
+      <div class="form-group"><label>Cantidad</label><input id="p-cantidad" type="number" value="1" min="1"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="agregarItemPedido()">+ Agregar vino</button>
+      <button class="btn btn-primary" onclick="crearPedido()">Confirmar pedido</button>
+    </div>
+    <div id="items-pedido" style="margin-top:10px;font-size:12px;color:var(--smoke)"></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Estado</th><th>Tipo</th><th>Fecha</th><th>Acción</th></tr></thead>
+    <tbody id="tabla-pedidos"></tbody>
+  </table></div>
+</div>
+
+<!-- CLIENTES -->
+<div id="page-clientes" class="page">
+  <div class="page-title">Clientes</div>
+  <div class="page-sub">Base de clientes y historial de compras</div>
+  <div class="card" style="background:var(--dark);border-color:rgba(196,163,90,.2)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--cream);margin-bottom:14px">🔍 Buscar historial de cliente</div>
+    <div style="display:flex;gap:8px">
+      <input id="hist-buscar" placeholder="Nombre del cliente..." style="flex:1;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:var(--cream)" onkeydown="if(event.key==='Enter')buscarHistorial()">
+      <button class="btn btn-gold" onclick="buscarHistorial()">Buscar</button>
+    </div>
+    <div id="historial-resultado" style="margin-top:16px"></div>
+  </div>
+  <div class="card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Registrar cliente</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre</label><input id="c-nombre" placeholder="María García"></div>
+      <div class="form-group"><label>Email</label><input id="c-email" type="email" placeholder="maria@email.com"></div>
+      <div class="form-group full"><label>Teléfono</label><input id="c-telefono" placeholder="11 1234-5678"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="agregarCliente()">Registrar cliente</button></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Registrado</th><th>Historial</th></tr></thead>
+    <tbody id="tabla-clientes"></tbody>
+  </table></div>
+</div>
+
+<!-- SOMMELIER -->
+<div id="page-sommelier" class="page">
+  <div class="page-title">Sommelier IA</div>
+  <div class="page-sub">Recomendaciones por perfil de sabor</div>
+  <div class="sommelier-card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;margin-bottom:4px">✦ Consultar al Sommelier</div>
+    <div style="font-size:12px;color:rgba(245,242,238,.4);margin-bottom:18px">Ajustá el perfil y recibí la mejor recomendación</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="slider-group"><div class="slider-top"><span class="slider-label">Tanino</span><span class="slider-val" id="val-tanino">5</span></div><input type="range" min="1" max="10" value="5" oninput="document.getElementById('val-tanino').textContent=this.value" id="sl-tanino"></div>
+      <div class="slider-group"><div class="slider-top"><span class="slider-label">Acidez</span><span class="slider-val" id="val-acidez">5</span></div><input type="range" min="1" max="10" value="5" oninput="document.getElementById('val-acidez').textContent=this.value" id="sl-acidez"></div>
+      <div class="slider-group"><div class="slider-top"><span class="slider-label">Cuerpo</span><span class="slider-val" id="val-cuerpo">5</span></div><input type="range" min="1" max="10" value="5" oninput="document.getElementById('val-cuerpo').textContent=this.value" id="sl-cuerpo"></div>
+      <div class="slider-group"><div class="slider-top"><span class="slider-label">Dulzor</span><span class="slider-val" id="val-dulzor">2</span></div><input type="range" min="1" max="10" value="2" oninput="document.getElementById('val-dulzor').textContent=this.value" id="sl-dulzor"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px"><label style="color:rgba(245,242,238,.4)">Contexto (opcional)</label><input id="sl-contexto" placeholder="Ej: tira de asado, regalo..." style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);color:var(--cream)"></div>
+    <button class="btn btn-gold" onclick="consultarSommelier()" id="btn-sommelier">✦ Pedir recomendación</button>
+    <div class="loading" id="loading-sommelier"><span class="spinner"></span>Consultando...</div>
+    <div class="resultado-ia" id="resultado-sommelier" style="display:none"></div>
+  </div>
+</div>
+
+<!-- MI PERFIL -->
+<div id="page-mi-perfil" class="page">
+  <div class="page-title">Mi Perfil de Sabor</div>
+  <div class="page-sub">Contanos tus gustos para recomendaciones perfectas</div>
+  <div class="perfil-hero" id="perfil-resumen" style="display:none">
+    <div class="perfil-nombre" id="perfil-nombre-display">Hola 👋</div>
+    <div class="perfil-tipo" id="perfil-tipo-display">Perfil en construcción</div>
+    <div class="taste-bars">
+      <div class="taste-item"><div class="taste-lbl">Tanino</div><div class="taste-track"><div class="taste-fill" id="pf-tanino" style="width:50%"></div></div></div>
+      <div class="taste-item"><div class="taste-lbl">Acidez</div><div class="taste-track"><div class="taste-fill" id="pf-acidez" style="width:50%"></div></div></div>
+      <div class="taste-item"><div class="taste-lbl">Cuerpo</div><div class="taste-track"><div class="taste-fill" id="pf-cuerpo" style="width:50%"></div></div></div>
+      <div class="taste-item"><div class="taste-lbl">Dulzor</div><div class="taste-track"><div class="taste-fill" id="pf-dulzor" style="width:20%"></div></div></div>
+    </div>
+  </div>
+  <div class="onboarding" id="onboarding-form">
+    <div class="ob-title">✦ Armá tu perfil</div>
+    <div class="ob-sub">Respondé estas preguntas y el Sommelier IA te conocerá mejor</div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label style="color:rgba(245,242,238,.5)">Tu nombre</label>
+      <input id="ob-nombre" placeholder="¿Cómo te llamás?" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);color:var(--cream)">
+    </div>
+    <div class="ob-pregunta">
+      <div class="ob-label">¿Qué tipo de vino preferís?</div>
+      <div class="ob-opciones">
+        <button class="ob-opcion" onclick="selOp(this,'tipo-vino')">🍷 Tintos</button>
+        <button class="ob-opcion" onclick="selOp(this,'tipo-vino')">🥂 Blancos</button>
+        <button class="ob-opcion" onclick="selOp(this,'tipo-vino')">🌸 Rosados</button>
+        <button class="ob-opcion" onclick="selOp(this,'tipo-vino')">✨ Espumantes</button>
+        <button class="ob-opcion" onclick="selOp(this,'tipo-vino')">🔀 Todos</button>
+      </div>
+    </div>
+    <div class="ob-pregunta">
+      <div class="ob-label">¿Qué nivel de tanino preferís?</div>
+      <div class="ob-opciones">
+        <button class="ob-opcion" onclick="selOp(this,'tanino');perfilLocal.tanino=2">Suave (bajo)</button>
+        <button class="ob-opcion" onclick="selOp(this,'tanino');perfilLocal.tanino=5">Medio</button>
+        <button class="ob-opcion" onclick="selOp(this,'tanino');perfilLocal.tanino=8">Intenso (alto)</button>
+      </div>
+    </div>
+    <div class="ob-pregunta">
+      <div class="ob-label">¿Cómo preferís la acidez?</div>
+      <div class="ob-opciones">
+        <button class="ob-opcion" onclick="selOp(this,'acidez');perfilLocal.acidez=3">Baja</button>
+        <button class="ob-opcion" onclick="selOp(this,'acidez');perfilLocal.acidez=5">Media</button>
+        <button class="ob-opcion" onclick="selOp(this,'acidez');perfilLocal.acidez=8">Alta y vibrante</button>
+      </div>
+    </div>
+    <div class="ob-pregunta">
+      <div class="ob-label">¿Preferís vinos con cuerpo?</div>
+      <div class="ob-opciones">
+        <button class="ob-opcion" onclick="selOp(this,'cuerpo');perfilLocal.cuerpo=3">Ligero</button>
+        <button class="ob-opcion" onclick="selOp(this,'cuerpo');perfilLocal.cuerpo=6">Medio</button>
+        <button class="ob-opcion" onclick="selOp(this,'cuerpo');perfilLocal.cuerpo=9">Pleno y robusto</button>
+      </div>
+    </div>
+    <div class="ob-pregunta">
+      <div class="ob-label">¿Con qué maridás más seguido?</div>
+      <div class="ob-opciones">
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🥩 Carnes rojas</button>
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🐟 Pescados</button>
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🍝 Pastas</button>
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🧀 Quesos</button>
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🥗 Vegetariano</button>
+        <button class="ob-opcion" onclick="selOp(this,'maridaje')">Solo tomo 🍷</button>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="guardarPerfil()">✦ Guardar mi perfil</button></div>
+  </div>
+</div>
+
+<!-- RECOMENDACIONES -->
+<div id="page-recomendaciones" class="page">
+  <div class="page-title">Mis Recomendaciones</div>
+  <div class="page-sub">Vinos seleccionados para tu perfil</div>
+  <div id="recomendaciones-grid"></div>
+</div>
+
+<!-- CATÁLOGO -->
+<div id="page-catalogo" class="page">
+  <div class="page-title">Catálogo de la Vinoteca</div>
+  <div class="page-sub">Todos los vinos disponibles</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <input id="cat-buscar" placeholder="🔍 Buscar vino o bodega..." style="flex:1;min-width:200px" oninput="filtrarCatalogo()">
+    <select id="cat-varietal" onchange="filtrarCatalogo()">
+      <option value="">Todos los varietales</option>
+      <option value="Malbec">Malbec</option>
+      <option value="Cabernet">Cabernet Sauvignon</option>
+      <option value="Chardonnay">Chardonnay</option>
+      <option value="Torrontés">Torrontés</option>
+      <option value="Blend">Blend</option>
+    </select>
+  </div>
+  <div id="catalogo-grid"></div>
+</div>
+
+<!-- MIS PEDIDOS -->
+<div id="page-mis-pedidos" class="page">
+  <div class="page-title">Mis Pedidos</div>
+  <div class="page-sub">Pedí directo a la vinoteca</div>
+  <div class="card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Nuevo pedido</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Tu nombre</label><input id="mp-cliente" placeholder="Tu nombre"></div>
+      <div class="form-group"><label>Entrega</label><select id="mp-tipo"><option value="retiro">🏪 Retiro en vinoteca</option><option value="envio">🚚 Envío a domicilio</option></select></div>
+      <div class="form-group full"><label>Vino</label><select id="mp-vino-sel"></select></div>
+      <div class="form-group"><label>Cantidad</label><input id="mp-cantidad" type="number" value="1" min="1"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="agregarItemMiPedido()">+ Agregar vino</button>
+      <button class="btn btn-primary" onclick="confirmarMiPedido()">✓ Confirmar pedido</button>
+    </div>
+    <div id="mp-items" style="margin-top:10px;font-size:12px;color:var(--smoke)"></div>
+  </div>
+  <div id="mp-historial"></div>
+</div>
+
+<!-- DIARIO -->
+<div id="page-diario" class="page">
+  <div class="page-title">Mi Diario de Catas</div>
+  <div class="page-sub">Registrá los vinos que probaste</div>
+  <div class="card">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Registrar cata</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Vino</label><select id="d-vino"></select></div>
+      <div class="form-group"><label>Fecha</label><input id="d-fecha" type="date"></div>
+      <div class="form-group full"><label>Tu puntaje</label>
+        <div class="stars-input">
+          <button class="star-btn" onclick="setStar(1)">★</button>
+          <button class="star-btn" onclick="setStar(2)">★</button>
+          <button class="star-btn" onclick="setStar(3)">★</button>
+          <button class="star-btn" onclick="setStar(4)">★</button>
+          <button class="star-btn" onclick="setStar(5)">★</button>
+        </div>
+      </div>
+      <div class="form-group full"><label>Tus notas</label><textarea id="d-nota" placeholder="¿Qué sentiste? Aromas, sabores, maridaje..."></textarea></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="agregarCata()">Registrar cata</button></div>
+  </div>
+  <div id="lista-catas"></div>
+</div>
+
+<!-- MODALES -->
+<div id="ficha-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div id="ficha-contenido" style="background:var(--white);border-radius:16px;width:100%;max-width:540px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)"></div>
+</div>
+
+<div id="ficha-edit-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--white);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--dark)">✦ Editar ficha del vino</div>
+      <button onclick="document.getElementById('ficha-edit-modal').style.display='none'" style="background:var(--cream);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;cursor:pointer">✕</button>
+    </div>
+    <input type="hidden" id="fe-id">
+    <div class="form-group" style="margin-bottom:10px"><label>Historia de la bodega</label><textarea id="fe-historia" style="min-height:90px" placeholder="Contá la historia de la bodega..."></textarea></div>
+    <div class="form-group" style="margin-bottom:10px"><label>Notas del enólogo</label><textarea id="fe-notas" style="min-height:70px" placeholder="Descripción del vino según el enólogo..."></textarea></div>
+    <div class="form-group" style="margin-bottom:10px"><label>Maridaje recomendado</label><input id="fe-maridaje" placeholder="Ej: 🥩 Asado, carnes rojas, quesos duros"></div>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-group"><label>Temperatura</label><input id="fe-temperatura" placeholder="Ej: 16–18°C"></div>
+      <div class="form-group"><label>Decantación</label><input id="fe-decantacion" placeholder="Ej: 30 minutos"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarFichaVino()">✓ Guardar ficha</button>
+      <button class="btn" style="background:var(--cream);border:1px solid var(--border)" onclick="document.getElementById('ficha-edit-modal').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3000/api';
+let vinosData=[];
+let itemsPedido=[];
+let itemsMiPedido=[];
+let starSelected=0;
+let perfilLocal={tanino:5,acidez:5,cuerpo:5,dulzor:2};
+let catasLocal=JSON.parse(localStorage.getItem('vinovibe_catas')||'[]');
+let perfilGuardado=JSON.parse(localStorage.getItem('vinovibe_perfil')||'null');
+let todosLosVinos=[];
+
+const tabsVinoteca=[
+  {id:'dashboard',label:'📊 Dashboard'},
+  {id:'vinos',label:'🍷 Vinos'},
+  {id:'pedidos',label:'📦 Pedidos'},
+  {id:'clientes',label:'👥 Clientes'},
+  {id:'sommelier',label:'✦ Sommelier'},
+];
+const tabsConsumidor=[
+  {id:'mi-perfil',label:'👤 Mi Perfil'},
+  {id:'recomendaciones',label:'✦ Recomendaciones'},
+  {id:'catalogo',label:'🍷 Catálogo'},
+  {id:'mis-pedidos',label:'📦 Mis Pedidos'},
+  {id:'diario',label:'📓 Diario'},
+];
+
+function setMode(modo,btn){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabs(modo);
+}
+
+function renderTabs(modo){
+  const tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
+  const bar=document.getElementById('tabs-bar');
+  bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showPage('${t.id}',this)">${t.label}</button>`).join('');
+  showPage(tabs[0].id,bar.querySelector('.tab-btn'));
+}
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const page=document.getElementById('page-'+id);
+  if(page)page.classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='dashboard')loadDashboard();
+  if(id==='vinos')loadVinos();
+  if(id==='pedidos')loadPedidos();
+  if(id==='clientes')loadClientes();
+  if(id==='mi-perfil')loadPerfil();
+  if(id==='recomendaciones')loadRecomendaciones();
+  if(id==='catalogo')loadCatalogo();
+  if(id==='mis-pedidos')loadMisPedidos();
+  if(id==='diario')loadDiario();
+}
+
+// ── PERFIL ──
+function selOp(btn,grupo){
+  btn.closest('.ob-opciones').querySelectorAll('.ob-opcion').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function guardarPerfil(){
+  const nombre=document.getElementById('ob-nombre').value.trim();
+  if(!nombre)return alert('Ingresá tu nombre');
+  const perfil={nombre,tanino:perfilLocal.tanino,acidez:perfilLocal.acidez,cuerpo:perfilLocal.cuerpo,dulzor:perfilLocal.dulzor};
+  localStorage.setItem('vinovibe_perfil',JSON.stringify(perfil));
+  perfilGuardado=perfil;
+  loadPerfil();
+  alert('✓ Perfil guardado');
+}
+
+function loadPerfil(){
+  if(perfilGuardado){
+    document.getElementById('perfil-resumen').style.display='block';
+    document.getElementById('perfil-nombre-display').textContent='Hola, '+perfilGuardado.nombre+' 👋';
+    const tipo=perfilGuardado.tanino>6?'Amante de Tintos Complejos':perfilGuardado.acidez>6?'Fan de Blancos Vibrantes':'Explorador de Sabores';
+    document.getElementById('perfil-tipo-display').textContent='✦ '+tipo;
+    document.getElementById('pf-tanino').style.width=(perfilGuardado.tanino*10)+'%';
+    document.getElementById('pf-acidez').style.width=(perfilGuardado.acidez*10)+'%';
+    document.getElementById('pf-cuerpo').style.width=(perfilGuardado.cuerpo*10)+'%';
+    document.getElementById('pf-dulzor').style.width=(perfilGuardado.dulzor*10)+'%';
+    document.getElementById('ob-nombre').value=perfilGuardado.nombre;
+  }
+}
+
+// ── RECOMENDACIONES ──
+async function loadRecomendaciones(){
+  const grid=document.getElementById('recomendaciones-grid');
+  grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--smoke)">Cargando...</div>';
+  try{
+    const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
+    const vinos=await fetch(API+'/vinos').then(r=>r.json());
+    const scored=vinos.map(v=>{
+      const diff=Math.abs(v.tanino-perfil.tanino)+Math.abs(v.acidez-perfil.acidez)+Math.abs(v.cuerpo-perfil.cuerpo)+Math.abs(v.dulzor-perfil.dulzor);
+      return{...v,match:Math.max(Math.round(100-(diff/40)*100),40)};
+    }).sort((a,b)=>b.match-a.match).slice(0,4);
+    grid.innerHTML=scored.map(v=>`
+      <div class="vino-card">
+        <div class="vino-bottle"></div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
+            <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${v.match}%</div>
+          </div>
+          <div style="font-size:11px;color:var(--smoke);margin-bottom:6px">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'}</div>
+          <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:8px">${v.descripcion||''}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="font-size:18px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
+            <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="verFichaVino(${v.id})">📋 Ficha</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">Error al cargar</div>';}
+}
+
+// ── CATÁLOGO ──
+async function loadCatalogo(){
+  const vinos=await fetch(API+'/vinos').then(r=>r.json());
+  todosLosVinos=vinos;
+  const sel=document.getElementById('mp-vino-sel');
+  if(sel)sel.innerHTML=vinos.map(v=>`<option value="${v.id}" data-precio="${v.precio}" data-nombre="${v.nombre}">${v.nombre} — ${v.bodega} ($${Number(v.precio).toLocaleString('es-AR')})</option>`).join('');
+  renderCatalogo(vinos);
+}
+
+function filtrarCatalogo(){
+  const buscar=document.getElementById('cat-buscar').value.toLowerCase();
+  const varietal=document.getElementById('cat-varietal').value;
+  renderCatalogo(todosLosVinos.filter(v=>(!buscar||v.nombre.toLowerCase().includes(buscar)||v.bodega.toLowerCase().includes(buscar))&&(!varietal||v.varietal===varietal)));
+}
+
+function renderCatalogo(vinos){
+  const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
+  const grid=document.getElementById('catalogo-grid');
+  if(!vinos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">No se encontraron vinos</div>';return;}
+  grid.innerHTML=vinos.map(v=>{
+    const diff=Math.abs(v.tanino-perfil.tanino)+Math.abs(v.acidez-perfil.acidez)+Math.abs(v.cuerpo-perfil.cuerpo)+Math.abs(v.dulzor-perfil.dulzor);
+    const match=Math.max(Math.round(100-(diff/40)*100),40);
+    const stockColor=v.stock<5?'#C0392B':v.stock<15?'#E8A020':'#256B25';
+    return`<div class="vino-card">
+      <div class="vino-bottle"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
+          <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${match}% match</div>
+        </div>
+        <div style="font-size:11px;color:var(--smoke);margin-bottom:4px">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'} ${v.anada?'· '+v.anada:''}</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:10px">${v.descripcion||''}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
+          <div style="font-size:11px;color:${stockColor};font-weight:500">${v.stock>0?'● '+v.stock+' disponibles':'✕ Sin stock'}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaVino(${v.id})">📋 Ficha</button>
+            <button class="btn btn-gold btn-sm" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio})" ${v.stock===0?'disabled':''}>+ Pedir</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function agregarAlPedidoRapido(id,nombre,precio){
+  const ex=itemsMiPedido.find(x=>x.vino_id===id);
+  if(ex)ex.cantidad++;
+  else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:1});
+  alert('✓ '+nombre+' agregado al pedido');
+}
+
+// ── FICHA VINO ──
+function obtenerHistoriaBodega(bodega){
+  const h={'Achaval Ferrer':'Fundada en 1998 en Mendoza, reconocida mundialmente por sus Malbecs de alta expresión. Sus viñedos se ubican en las zonas más emblemáticas de Luján de Cuyo y el Valle de Uco.','Zuccardi':'Bodega familiar fundada en 1963 por Alberto Zuccardi. Pionera en el Valle de Uco, hoy considerada una de las mejores bodegas del mundo.','Catena Zapata':'Fundada en 1902, es la bodega insignia del vino argentino. Nicolás Catena revolucionó el Malbec al apostar por viñedos de altura en los Andes.','Michel Rolland':'El enólogo francés Michel Rolland creó Clos de los Siete combinando técnicas bordelesas con la riqueza del terroir mendocino.','Alta Vista':'Más de 100 años de historia en Mendoza, especializada en varietales de altura como Torrontés y Malbec de Luján de Cuyo.','Norton':'Una de las bodegas más antiguas de Argentina, fundada en 1895. Combina tradición y modernidad en sus vinos.','Mosquita Muerta':'Bodega boutique mendocina que apuesta por la viticultura natural y la expresión auténtica del terroir.','Ballester':'Distribuidora y productora con amplia trayectoria, reconocida por la calidad y consistencia de sus vinos.'};
+  return h[bodega]||`${bodega} es una bodega argentina reconocida por la calidad de sus vinos y su compromiso con el terroir nacional.`;
+}
+
+async function verFichaVino(id){
+  try{
+    const v=await fetch(API+'/vinos/'+id).then(r=>r.json());
+    const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
+    const diff=Math.abs(v.tanino-perfil.tanino)+Math.abs(v.acidez-perfil.acidez)+Math.abs(v.cuerpo-perfil.cuerpo)+Math.abs(v.dulzor-perfil.dulzor);
+    const match=Math.max(Math.round(100-(diff/40)*100),40);
+    const extra=v.extra||{};
+    const barras=[{lbl:'Tanino',val:v.tanino},{lbl:'Acidez',val:v.acidez},{lbl:'Cuerpo',val:v.cuerpo},{lbl:'Dulzor',val:v.dulzor}];
+    const maridajes={'Malbec':'🥩 Asado, carnes rojas, quesos duros','Cabernet':'🥩 Cordero, costillas, pasta con carne','Cabernet Sauvignon':'🥩 Cordero, costillas, pasta con carne','Chardonnay':'🐟 Pescado, pollo, pasta con crema','Torrontés':'🦐 Mariscos, comida picante, ensaladas','Blend':'🥩 Carnes rojas, guisos, quesos maduros'};
+    const maridaje=extra.maridaje||maridajes[v.varietal]||'🍽️ Carnes y quesos seleccionados';
+    const temp=extra.temperatura||({Malbec:'16–18°C',Chardonnay:'8–10°C',Torrontés:'7–9°C'}[v.varietal]||'14–16°C');
+    const decantacion=extra.decantacion||'30 minutos antes de servir';
+    const historia=extra.historia_bodega||obtenerHistoriaBodega(v.bodega);
+    const modal=document.getElementById('ficha-modal');
+    modal.style.display='flex';
+    document.getElementById('ficha-contenido').innerHTML=`
+      <div style="background:linear-gradient(135deg,var(--dark),#1C1428);padding:24px;border-radius:14px 14px 0 0;color:var(--cream);position:relative">
+        <button onclick="cerrarFicha()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.1);border:none;color:var(--cream);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0"></div></div>
+          <div>
+            <div style="display:inline-block;background:rgba(196,163,90,.2);color:var(--gold);font-size:10px;font-weight:600;padding:2px 8px;border-radius:50px;margin-bottom:6px">✦ ${match}% MATCH</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:2px">${v.nombre}</div>
+            <div style="font-size:12px;color:rgba(245,242,238,.5)">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'} ${v.anada?'· '+v.anada:''}</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:18px;overflow-y:auto;flex:1">
+        <div style="background:var(--cream);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:6px">Notas de cata</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--ink);line-height:1.6">${v.descripcion||'Sin descripción.'}</div>
+        </div>
+        <div style="background:var(--white);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:10px">Perfil de sabor</div>
+          ${barras.map(b=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><div style="font-size:11px;color:var(--smoke);width:55px">${b.lbl}</div><div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:${b.val*10}%;background:var(--garnet);border-radius:2px"></div></div><div style="font-size:11px;font-weight:600;color:var(--ink);width:18px">${b.val}</div></div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div style="background:var(--white);border-radius:12px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:5px">Maridaje</div>
+            <div style="font-size:12px;color:var(--ink);line-height:1.5">${maridaje}</div>
+          </div>
+          <div style="background:var(--white);border-radius:12px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:5px">Servicio</div>
+            <div style="font-size:18px;font-family:'Cormorant Garamond',serif;color:var(--dark)">${temp}</div>
+            <div style="font-size:10px;color:var(--smoke);margin-top:3px">⏱ ${decantacion}</div>
+          </div>
+        </div>
+        <div style="background:linear-gradient(135deg,var(--dark),#1C1428);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(196,163,90,.15)">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,242,238,.4);margin-bottom:6px">Historia de la bodega</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--cream);margin-bottom:5px">${v.bodega}</div>
+          <div style="font-size:11px;color:rgba(245,242,238,.6);line-height:1.6">${historia}</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <div style="font-size:22px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="cerrarFicha()">Volver</button>
+            <button class="btn btn-gold" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio});cerrarFicha()" ${v.stock===0?'disabled':''}>+ Pedir</button>
+          </div>
+        </div>
+      </div>`;
+  }catch(e){alert('Error al cargar la ficha');}
+}
+
+function cerrarFicha(){
+  document.getElementById('ficha-modal').style.display='none';
+}
+
+async function editarFicha(id){
+  const v=await fetch(API+'/vinos/'+id).then(r=>r.json());
+  const extra=v.extra||{};
+  document.getElementById('fe-id').value=id;
+  document.getElementById('fe-historia').value=extra.historia_bodega||obtenerHistoriaBodega(v.bodega);
+  document.getElementById('fe-notas').value=v.descripcion||'';
+  document.getElementById('fe-maridaje').value=extra.maridaje||'';
+  document.getElementById('fe-temperatura').value=extra.temperatura||'';
+  document.getElementById('fe-decantacion').value=extra.decantacion||'';
+  document.getElementById('ficha-edit-modal').style.display='flex';
+}
+
+async function guardarFichaVino(){
+  const id=document.getElementById('fe-id').value;
+  const body={historia_bodega:document.getElementById('fe-historia').value,notas_enologo:document.getElementById('fe-notas').value,maridaje:document.getElementById('fe-maridaje').value,temperatura:document.getElementById('fe-temperatura').value,decantacion:document.getElementById('fe-decantacion').value};
+  await fetch(API+'/vinos/'+id+'/ficha',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  document.getElementById('ficha-edit-modal').style.display='none';
+  alert('✓ Ficha actualizada');
+  loadVinos();
+}
+
+// ── MIS PEDIDOS ──
+async function loadMisPedidos(){
+  await loadCatalogo();
+  if(perfilGuardado?.nombre)document.getElementById('mp-cliente').value=perfilGuardado.nombre;
+  renderMiHistorial();
+}
+
+function agregarItemMiPedido(){
+  const sel=document.getElementById('mp-vino-sel');
+  const id=parseInt(sel.value);
+  const cant=parseInt(document.getElementById('mp-cantidad').value)||1;
+  const opt=sel.options[sel.selectedIndex];
+  const nombre=opt.dataset.nombre||opt.text.split('—')[0].trim();
+  const precio=parseFloat(opt.dataset.precio);
+  const ex=itemsMiPedido.find(x=>x.vino_id===id);
+  if(ex)ex.cantidad+=cant;
+  else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:cant});
+  renderItemsMiPedido();
+}
+
+function renderItemsMiPedido(){
+  const div=document.getElementById('mp-items');
+  if(!itemsMiPedido.length){div.innerHTML='';return;}
+  const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
+  div.innerHTML='<strong>Pedido actual:</strong><br>'+itemsMiPedido.map(x=>`• ${x.nombre} × ${x.cantidad} — $${(x.precio*x.cantidad).toLocaleString('es-AR')}`).join('<br>')+`<br><br><strong>Total: $${total.toLocaleString('es-AR')}</strong>`;
+}
+
+async function confirmarMiPedido(){
+  const cliente=document.getElementById('mp-cliente').value;
+  const tipo=document.getElementById('mp-tipo').value;
+  if(!cliente)return alert('Ingresá tu nombre');
+  if(!itemsMiPedido.length)return alert('Agregá al menos un vino');
+  const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
+  const items=[...itemsMiPedido];
+  await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,items,total,tipo})});
+  const historial=JSON.parse(localStorage.getItem('mis_pedidos')||'[]');
+  historial.unshift({fecha:new Date().toISOString(),cliente,tipo,total,items});
+  localStorage.setItem('mis_pedidos',JSON.stringify(historial.slice(0,20)));
+  itemsMiPedido=[];
+  renderItemsMiPedido();
+  alert('✓ Pedido enviado a la vinoteca');
+  renderMiHistorial();
+}
+
+function renderMiHistorial(){
+  const historial=JSON.parse(localStorage.getItem('mis_pedidos')||'[]');
+  const div=document.getElementById('mp-historial');
+  if(!historial.length){div.innerHTML='';return;}
+  div.innerHTML='<div style="font-family:\'Cormorant Garamond\',serif;font-size:18px;color:var(--dark);margin-bottom:10px">Mis pedidos anteriores</div>'+historial.map(p=>`<div class="card" style="margin-bottom:8px"><div style="font-size:11px;color:var(--smoke);margin-bottom:4px">${new Date(p.fecha).toLocaleDateString('es-AR')} · ${p.tipo==='retiro'?'🏪 Retiro':'🚚 Envío'}</div><div style="font-size:13px;color:var(--ink);margin-bottom:4px">${p.items.map(i=>`${i.nombre} × ${i.cantidad}`).join(', ')}</div><div style="font-size:16px;font-weight:600;color:var(--garnet)">$${Number(p.total).toLocaleString('es-AR')}</div></div>`).join('');
+}
+
+// ── DIARIO ──
+function setStar(n){
+  starSelected=n;
+  document.querySelectorAll('.star-btn').forEach((b,i)=>b.classList.toggle('on',i<n));
+}
+
+async function loadDiario(){
+  const vinos=await fetch(API+'/vinos').then(r=>r.json());
+  document.getElementById('d-vino').innerHTML=vinos.map(v=>`<option value="${v.id}" data-nombre="${v.nombre}" data-bodega="${v.bodega}">${v.nombre} — ${v.bodega}</option>`).join('');
+  document.getElementById('d-fecha').value=new Date().toISOString().split('T')[0];
+  renderCatas();
+}
+
+function agregarCata(){
+  const sel=document.getElementById('d-vino');
+  const opt=sel.options[sel.selectedIndex];
+  catasLocal.unshift({id:Date.now(),vino_id:sel.value,nombre:opt.dataset.nombre,bodega:opt.dataset.bodega,fecha:document.getElementById('d-fecha').value,puntaje:starSelected||3,nota:document.getElementById('d-nota').value});
+  localStorage.setItem('vinovibe_catas',JSON.stringify(catasLocal));
+  document.getElementById('d-nota').value='';
+  setStar(0);
+  renderCatas();
+  alert('✓ Cata registrada');
+}
+
+function renderCatas(){
+  const lista=document.getElementById('lista-catas');
+  if(!catasLocal.length){lista.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">Todavía no registraste ninguna cata</div>';return;}
+  lista.innerHTML=catasLocal.map(c=>`<div class="cata-card"><div class="cata-bottle"></div><div class="cata-info"><div class="cata-nombre">${c.nombre}</div><div class="cata-bodega">${c.bodega}</div><div class="cata-stars">${'★'.repeat(c.puntaje)}${'☆'.repeat(5-c.puntaje)}</div>${c.nota?`<div class="cata-nota">${c.nota}</div>`:''}<div class="cata-fecha">${new Date(c.fecha).toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}</div></div><button class="btn btn-danger btn-sm" onclick="eliminarCata(${c.id})">✕</button></div>`).join('');
+}
+
+function eliminarCata(id){
+  if(!confirm('¿Eliminar?'))return;
+  catasLocal=catasLocal.filter(c=>c.id!==id);
+  localStorage.setItem('vinovibe_catas',JSON.stringify(catasLocal));
+  renderCatas();
+}
+
+// ── VINOTECA ──
+function parsearItems(items){
+  try{const a=typeof items==='string'?JSON.parse(items):items;return Array.isArray(a)?a.map(i=>`${i.nombre}×${i.cantidad}`).join(', '):'-';}catch{return'-';}
+}
+
+async function loadDashboard(){
+  try{
+    const s=await fetch(API+'/stats').then(r=>r.json());
+    document.getElementById('kpi-ventas').textContent='$'+Number(s.ventasHoy).toLocaleString('es-AR');
+    document.getElementById('kpi-pedidos').textContent=s.pedidosHoy;
+    document.getElementById('kpi-vinos').textContent=s.totalVinos;
+    document.getElementById('kpi-clientes').textContent=s.totalClientes;
+    document.getElementById('stock-alertas').innerHTML=(s.stockBajo||[]).map(v=>`<div class="stock-alert">⚠️ <strong>${v.nombre}</strong> — stock bajo: ${v.stock} u.</div>`).join('');
+    const p=await fetch(API+'/pedidos').then(r=>r.json());
+    document.getElementById('tabla-pedidos-recientes').innerHTML=p.slice(0,5).map(x=>`<tr><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td>${x.cliente_nombre}</td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado}</span></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin pedidos aún</td></tr>';
+  }catch(e){console.error(e);}
+}
+
+async function loadVinos(){
+  const v=await fetch(API+'/vinos').then(r=>r.json());
+  vinosData=v;
+  document.getElementById('tabla-vinos').innerHTML=v.map(x=>`<tr><td><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></td><td>${x.bodega}</td><td>${x.varietal||'-'}</td><td>${x.anada||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<10?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarFicha(${x.id})">✦ Editar ficha</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarVino(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--smoke)">Sin vinos</td></tr>';
+  const sel=document.getElementById('p-vino-sel');
+  if(sel)sel.innerHTML=v.map(x=>`<option value="${x.id}" data-precio="${x.precio}">${x.nombre} — ${x.bodega} ($${Number(x.precio).toLocaleString('es-AR')})</option>`).join('');
+}
+
+async function agregarVino(){
+  const b={nombre:document.getElementById('v-nombre').value,bodega:document.getElementById('v-bodega').value,region:document.getElementById('v-region').value,varietal:document.getElementById('v-varietal').value,anada:document.getElementById('v-anada').value,precio:document.getElementById('v-precio').value,stock:document.getElementById('v-stock').value,tanino:document.getElementById('v-tanino').value||5,acidez:document.getElementById('v-acidez').value||5,cuerpo:document.getElementById('v-cuerpo').value||5,dulzor:document.getElementById('v-dulzor').value||2,descripcion:document.getElementById('v-descripcion').value};
+  if(!b.nombre||!b.bodega)return alert('Nombre y bodega son obligatorios');
+  await fetch(API+'/vinos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  loadVinos();
+}
+
+async function eliminarVino(id){
+  if(!confirm('¿Eliminar?'))return;
+  await fetch(API+'/vinos/'+id,{method:'DELETE'});
+  loadVinos();
+}
+
+async function loadPedidos(){
+  await loadVinos();
+  const p=await fetch(API+'/pedidos').then(r=>r.json());
+  document.getElementById('tabla-pedidos').innerHTML=p.map(x=>`<tr><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong></td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option></select></td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
+}
+
+function agregarItemPedido(){
+  const sel=document.getElementById('p-vino-sel');
+  const id=parseInt(sel.value);
+  const cant=parseInt(document.getElementById('p-cantidad').value)||1;
+  const v=vinosData.find(x=>x.id===id);
+  if(!v)return;
+  const ex=itemsPedido.find(x=>x.vino_id===id);
+  if(ex)ex.cantidad+=cant;
+  else itemsPedido.push({vino_id:id,nombre:v.nombre,precio:v.precio,cantidad:cant});
+  document.getElementById('items-pedido').innerHTML='<strong>Pedido:</strong> '+itemsPedido.map(x=>`${x.nombre}×${x.cantidad}`).join(' | ');
+}
+
+async function crearPedido(){
+  const cliente=document.getElementById('p-cliente').value;
+  const tipo=document.getElementById('p-tipo').value;
+  if(!cliente||!itemsPedido.length)return alert('Completá cliente y agregá al menos un vino');
+  const total=itemsPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
+  await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,items:itemsPedido,total,tipo})});
+  itemsPedido=[];
+  document.getElementById('p-cliente').value='';
+  document.getElementById('items-pedido').innerHTML='';
+  alert('✓ Pedido creado');
+  loadPedidos();
+}
+
+async function cambiarEstado(id,estado){
+  await fetch(API+'/pedidos/'+id+'/estado',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado})});
+}
+
+async function loadClientes(){
+  const c=await fetch(API+'/clientes').then(r=>r.json());
+  document.getElementById('tabla-clientes').innerHTML=c.map(x=>`<tr><td><strong>${x.nombre}</strong></td><td>${x.email||'-'}</td><td>${x.telefono||'-'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="buscarHistorialDirecto('${x.nombre}')">Ver historial</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin clientes</td></tr>';
+}
+
+async function agregarCliente(){
+  const b={nombre:document.getElementById('c-nombre').value,email:document.getElementById('c-email').value,telefono:document.getElementById('c-telefono').value};
+  if(!b.nombre)return alert('El nombre es obligatorio');
+  const r=await fetch(API+'/clientes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  const d=await r.json();
+  if(d.error)return alert(d.error);
+  document.getElementById('c-nombre').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-telefono').value='';
+  alert('✓ Cliente registrado');
+  loadClientes();
+}
+
+async function buscarHistorial(){
+  const nombre=document.getElementById('hist-buscar').value.trim();
+  if(!nombre)return alert('Ingresá un nombre');
+  mostrarHistorial(nombre);
+}
+
+async function buscarHistorialDirecto(nombre){
+  document.getElementById('hist-buscar').value=nombre;
+  mostrarHistorial(nombre);
+}
+
+async function mostrarHistorial(nombre){
+  const div=document.getElementById('historial-resultado');
+  div.innerHTML='<div style="color:rgba(245,242,238,.5);font-size:12px">Buscando...</div>';
+  try{
+    const data=await fetch(API+'/clientes/'+encodeURIComponent(nombre)+'/historial').then(r=>r.json());
+    if(!data.pedidos.length){div.innerHTML=`<div style="color:rgba(245,242,238,.5);font-size:13px">Sin pedidos para "<strong style="color:var(--gold)">${nombre}</strong>"</div>`;return;}
+    div.innerHTML=`
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 14px;border:1px solid rgba(255,255,255,.08)"><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--cream)">${data.cantidad_pedidos}</div><div style="font-size:10px;color:rgba(245,242,238,.4);text-transform:uppercase;letter-spacing:.08em">Pedidos</div></div>
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 14px;border:1px solid rgba(255,255,255,.08)"><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold)">$${Number(data.total_gastado).toLocaleString('es-AR')}</div><div style="font-size:10px;color:rgba(245,242,238,.4);text-transform:uppercase;letter-spacing:.08em">Total gastado</div></div>
+      </div>
+      ${data.pedidos.map(p=>`<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:11px;color:rgba(245,242,238,.5)">${new Date(p.created_at).toLocaleDateString('es-AR')} · ${p.tipo==='retiro'?'🏪 Retiro':'🚚 Envío'}</div><span class="badge badge-${p.estado}">${p.estado}</span></div><div style="font-size:13px;color:var(--cream);margin-bottom:4px">${parsearItems(p.items)}</div><div style="font-size:15px;font-weight:600;color:var(--gold)">$${Number(p.total).toLocaleString('es-AR')}</div></div>`).join('')}`;
+  }catch(e){div.innerHTML='<div style="color:#E07070;font-size:12px">Error al buscar</div>';}
+}
+
+async function consultarSommelier(){
+  const btn=document.getElementById('btn-sommelier');
+  btn.disabled=true;btn.textContent='Consultando...';
+  document.getElementById('loading-sommelier').style.display='block';
+  document.getElementById('resultado-sommelier').style.display='none';
+  try{
+    const v=await fetch(API+'/vinos').then(r=>r.json());
+    if(!v.length)return alert('No hay vinos en el catálogo');
+    const perfil={tanino:document.getElementById('sl-tanino').value,acidez:document.getElementById('sl-acidez').value,cuerpo:document.getElementById('sl-cuerpo').value,dulzor:document.getElementById('sl-dulzor').value};
+    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:document.getElementById('sl-contexto').value,vinos:v})});
+    const d=await r.json();
+    const div=document.getElementById('resultado-sommelier');
+    div.style.display='block';
+    div.innerHTML=`<div class="match-badge">✦ ${d.match_porcentaje}% match</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${d.vino_recomendado}</div><div style="font-size:11px;color:rgba(245,242,238,.4);margin-bottom:10px">${d.bodega}</div><div style="font-size:13px;color:rgba(245,242,238,.65);line-height:1.6;margin-bottom:8px">${d.razon}</div><div style="font-size:12px;color:var(--gold)">🍽️ ${d.maridaje}</div>`;
+  }catch(e){alert('Error: '+e.message);}
+  finally{document.getElementById('loading-sommelier').style.display='none';btn.disabled=false;btn.textContent='✦ Pedir recomendación';}
+}
+
+renderTabs('vinoteca');
+</script>
+</body>
+</html>
