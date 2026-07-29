@@ -97,6 +97,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .vino-bottle::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0}
 @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.taste-bars{grid-template-columns:1fr}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -220,7 +221,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div id="items-pedido" style="margin-top:10px;font-size:12px;color:var(--smoke)"></div>
   </div>
   <div class="table-wrap"><table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Estado</th><th>Tipo</th><th>Fecha</th><th>Acción</th></tr></thead>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Estado</th><th>Tipo</th><th>Fecha</th><th>Acción</th><th>Comprobante</th></tr></thead>
     <tbody id="tabla-pedidos"></tbody>
   </table></div>
 </div>
@@ -865,7 +866,9 @@ async function loadVinos(){
 async function agregarVino(){
   const b={nombre:document.getElementById('v-nombre').value,bodega:document.getElementById('v-bodega').value,region:document.getElementById('v-region').value,varietal:document.getElementById('v-varietal').value,anada:document.getElementById('v-anada').value,precio:document.getElementById('v-precio').value,stock:document.getElementById('v-stock').value,tanino:document.getElementById('v-tanino').value||5,acidez:document.getElementById('v-acidez').value||5,cuerpo:document.getElementById('v-cuerpo').value||5,dulzor:document.getElementById('v-dulzor').value||2,descripcion:document.getElementById('v-descripcion').value};
   if(!b.nombre||!b.bodega)return alert('Nombre y bodega son obligatorios');
-  await fetch(API+'/vinos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  const r=await fetch(API+'/vinos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if(r.status===401){alert('Tu sesión venció. Volvé a entrar.');location.reload();return;}
+  if(!r.ok){alert('Error al guardar el vino. Probá de nuevo.');return;}
   loadVinos();
 }
 
@@ -901,7 +904,71 @@ async function eliminarProducto(id){
 async function loadPedidos(){
   await loadVinos();
   const p=await fetch(API+'/pedidos').then(r=>r.json());
-  document.getElementById('tabla-pedidos').innerHTML=p.map(x=>`<tr><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong></td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option></select></td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
+  document.getElementById('tabla-pedidos').innerHTML=p.map(x=>`<tr><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong></td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option></select></td><td><button class="btn btn-sm" onclick='generarComprobante(${JSON.stringify(x).replace(/'/g,"&apos;")})'>📄 PDF</button></td></tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
+}
+
+function generarComprobante(pedido){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const items = parsearItemsArray(pedido.items);
+  let y = 20;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.text('VinoVibe', 20, y);
+  doc.setFontSize(11);
+  doc.setFont('helvetica','normal');
+  y += 8;
+  doc.text('Comprobante de pedido (no válido como factura)', 20, y);
+  y += 12;
+
+  doc.setFontSize(10);
+  doc.text(`Pedido N°: ${pedido.id}`, 20, y); y += 6;
+  doc.text(`Fecha: ${new Date(pedido.created_at).toLocaleDateString('es-AR')}`, 20, y); y += 6;
+  doc.text(`Cliente: ${pedido.cliente_nombre}`, 20, y); y += 6;
+  doc.text(`Entrega: ${pedido.tipo==='retiro'?'Retiro en vinoteca':'Envío a domicilio'}`, 20, y); y += 10;
+
+  doc.setFont('helvetica','bold');
+  doc.text('Producto', 20, y);
+  doc.text('Cant.', 130, y);
+  doc.text('Subtotal', 160, y);
+  doc.setFont('helvetica','normal');
+  y += 4;
+  doc.line(20, y, 190, y);
+  y += 6;
+
+  items.forEach(it=>{
+    doc.text(it.nombre, 20, y);
+    doc.text(String(it.cantidad), 130, y);
+    doc.text('$'+Number(it.subtotal).toLocaleString('es-AR'), 160, y);
+    y += 7;
+  });
+
+  y += 4;
+  doc.line(20, y, 190, y);
+  y += 8;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text(`Total: $${Number(pedido.total).toLocaleString('es-AR')}`, 20, y);
+
+  y += 16;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text('Este comprobante es un resumen del pedido y no reemplaza una factura fiscal.', 20, y);
+  y += 5;
+  doc.text('¡Gracias por tu compra!', 20, y);
+
+  doc.save(`pedido-${pedido.id}-${pedido.cliente_nombre.replace(/\s/g,'_')}.pdf`);
+}
+
+function parsearItemsArray(itemsRaw){
+  let arr;
+  try{ arr = typeof itemsRaw==='string' ? JSON.parse(itemsRaw) : itemsRaw; }catch(e){ arr=[]; }
+  return arr.map(i=>({
+    nombre: i.nombre || 'Producto',
+    cantidad: i.cantidad || 1,
+    subtotal: (i.precio||0) * (i.cantidad||1)
+  }));
 }
 
 function agregarItemPedido(){

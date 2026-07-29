@@ -15,11 +15,16 @@ const db = createClient({
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.set('trust proxy', 1);
 app.use(session({
   secret: process.env.SESSION_SECRET || 'vinovibe-cambiar-este-secreto',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 } // 7 días
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -93,6 +98,12 @@ async function initDb() {
     await db.execute({ sql: ins, args });
   }
 }
+
+// ── CONFIG PÚBLICA ───────────────────────────────────────────────────────
+
+app.get('/api/config', (req, res) => {
+  res.json({ whatsapp: process.env.VINOTECA_WHATSAPP || null });
+});
 
 // ── AUTENTICACIÓN ────────────────────────────────────────────────────────
 

@@ -774,10 +774,31 @@ async function confirmarMiPedido(){
   const historial=JSON.parse(localStorage.getItem('mis_pedidos')||'[]');
   historial.unshift({fecha:new Date().toISOString(),cliente,tipo,total,items});
   localStorage.setItem('mis_pedidos',JSON.stringify(historial.slice(0,20)));
+  mostrarBotonWhatsapp(cliente,tipo,items,total);
   itemsMiPedido=[];
   renderItemsMiPedido();
-  alert('✓ Pedido enviado a la vinoteca');
   renderMiHistorial();
+}
+
+async function mostrarBotonWhatsapp(cliente,tipo,items,total){
+  const div=document.getElementById('mp-items');
+  let msg=`¡Hola! Quiero confirmar mi pedido en VinoVibe 🍷%0A%0A`;
+  msg+=`*Cliente:* ${cliente}%0A`;
+  msg+=`*Entrega:* ${tipo==='retiro'?'Retiro en vinoteca':'Envío a domicilio'}%0A%0A`;
+  msg+=`*Pedido:*%0A`;
+  items.forEach(i=>{msg+=`• ${i.nombre} x${i.cantidad} — $${(i.precio*i.cantidad).toLocaleString('es-AR')}%0A`;});
+  msg+=`%0A*Total: $${total.toLocaleString('es-AR')}*`;
+
+  let whatsappHtml='';
+  try{
+    const cfg=await fetch(API+'/config').then(r=>r.json());
+    if(cfg.whatsapp){
+      const numero=cfg.whatsapp.replace(/\D/g,'');
+      whatsappHtml=`<a href="https://wa.me/${numero}?text=${msg}" target="_blank" style="display:inline-block;margin-top:14px;background:#25D366;color:#fff;padding:12px 22px;border-radius:50px;text-decoration:none;font-weight:600;font-size:14px">📲 Enviar pedido por WhatsApp</a>`;
+    }
+  }catch(e){}
+
+  div.innerHTML=`<div style="text-align:center;padding:10px 0">✓ Pedido enviado a la vinoteca<br>${whatsappHtml}</div>`;
 }
 
 function renderMiHistorial(){
