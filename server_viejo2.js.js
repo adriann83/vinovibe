@@ -39,12 +39,6 @@ async function initDb() {
       estado TEXT DEFAULT 'nuevo', tipo TEXT DEFAULT 'retiro',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-    CREATE TABLE IF NOT EXISTS productos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL, categoria TEXT NOT NULL, marca TEXT,
-      precio REAL, stock INTEGER DEFAULT 0, descripcion TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
   `);
 
   const countResult = await db.execute('SELECT COUNT(*) as c FROM vinos');
@@ -110,34 +104,6 @@ app.put('/api/vinos/:id/ficha', async (req, res) => {
       sql: `UPDATE vinos SET descripcion=?, imagen=? WHERE id=?`,
       args: [notas_enologo, extra, req.params.id]
     });
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ── PRODUCTOS (aceites, aceitunas, otros) ───────────────────────────────────
-
-app.get('/api/productos', async (req, res) => {
-  try {
-    const result = await db.execute('SELECT * FROM productos ORDER BY categoria, nombre');
-    res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/productos', async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion } = req.body;
-  if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
-  try {
-    const result = await db.execute({
-      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion) VALUES (?,?,?,?,?,?)`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null]
-    });
-    res.json({ id: Number(result.lastInsertRowid) });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/api/productos/:id', async (req, res) => {
-  try {
-    await db.execute({ sql: 'DELETE FROM productos WHERE id=?', args: [req.params.id] });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
