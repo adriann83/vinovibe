@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
 const { createClient } = require('@libsql/client');
 
 const app = express();
@@ -11,9 +13,20 @@ const db = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'vinovibe-cambiar-este-secreto',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 } // 7 días
+}));
 app.use(express.static(path.join(__dirname, 'public')));
+
+function requireAuth(req, res, next) {
+  if (req.session && req.session.isAdmin) return next();
+  return res.status(401).json({ error: 'No autorizado' });
+}
 
 // ── INIT DB ──────────────────────────────────────────────────────────────
 
@@ -45,7 +58,23 @@ async function initDb() {
       precio REAL, stock INTEGER DEFAULT 0, descripcion TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+
+  // Crear el usuario admin inicial si no existe ninguno (usando ADMIN_USERNAME / ADMIN_PASSWORD del .env)
+  const adminCount = await db.execute('SELECT COUNT(*) as c FROM admin_users');
+  if (Number(adminCount.rows[0].c) === 0) {
+    const username = process.env.ADMIN_USERNAME || 'admin';
+    const password = process.env.ADMIN_PASSWORD || 'vinovibe123';
+    const hash = await bcrypt.hash(password, 10);
+    await db.execute({ sql: 'INSERT INTO admin_users (username, password_hash) VALUES (?,?)', args: [username, hash] });
+    console.log(`✓ Usuario admin creado: "${username}" (cambiá la contraseña en .env con ADMIN_USERNAME / ADMIN_PASSWORD)`);
+  }
 
   const countResult = await db.execute('SELECT COUNT(*) as c FROM vinos');
   const count = Number(countResult.rows[0].c);
@@ -64,6 +93,34 @@ async function initDb() {
     await db.execute({ sql: ins, args });
   }
 }
+
+// ── AUTENTICACIÓN ────────────────────────────────────────────────────────
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await db.execute({ sql: 'SELECT * FROM admin_users WHERE username=?', args: [username] });
+    const user = result.rows[0];
+    if (!user) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    req.session.isAdmin = true;
+    req.session.username = username;
+    res.json({ ok: true, username });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/admin/check', (req, res) => {
+  res.json({ isAdmin: !!(req.session && req.session.isAdmin), username: req.session?.username || null });
+});
 
 // ── VINOS ──────────────────────────────────────────────────────────────────
 
@@ -84,7 +141,7 @@ app.get('/api/vinos/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/vinos', async (req, res) => {
+app.post('/api/vinos', requireAuth, async (req, res) => {
   const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion } = req.body;
   try {
     const result = await db.execute({
@@ -95,14 +152,14 @@ app.post('/api/vinos', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/vinos/:id', async (req, res) => {
+app.delete('/api/vinos/:id', requireAuth, async (req, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM vinos WHERE id=?', args: [req.params.id] });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/vinos/:id/ficha', async (req, res) => {
+app.put('/api/vinos/:id/ficha', requireAuth, async (req, res) => {
   const { historia_bodega, notas_enologo, maridaje, temperatura, decantacion } = req.body;
   const extra = JSON.stringify({ historia_bodega, maridaje, temperatura, decantacion });
   try {
@@ -123,7 +180,7 @@ app.get('/api/productos', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/productos', async (req, res) => {
+app.post('/api/productos', requireAuth, async (req, res) => {
   const { nombre, categoria, marca, precio, stock, descripcion } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
@@ -135,7 +192,7 @@ app.post('/api/productos', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/productos/:id', async (req, res) => {
+app.delete('/api/productos/:id', requireAuth, async (req, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM productos WHERE id=?', args: [req.params.id] });
     res.json({ ok: true });
@@ -144,7 +201,7 @@ app.delete('/api/productos/:id', async (req, res) => {
 
 // ── CLIENTES ───────────────────────────────────────────────────────────────
 
-app.get('/api/clientes', async (req, res) => {
+app.get('/api/clientes', requireAuth, async (req, res) => {
   try {
     const result = await db.execute('SELECT * FROM clientes ORDER BY nombre');
     res.json(result.rows);
@@ -179,7 +236,7 @@ app.get('/api/clientes/:nombre/historial', async (req, res) => {
 
 // ── PEDIDOS ────────────────────────────────────────────────────────────────
 
-app.get('/api/pedidos', async (req, res) => {
+app.get('/api/pedidos', requireAuth, async (req, res) => {
   try {
     const result = await db.execute('SELECT * FROM pedidos ORDER BY created_at DESC');
     res.json(result.rows);
@@ -196,13 +253,17 @@ app.post('/api/pedidos', async (req, res) => {
     const pedidoId = Number(result.lastInsertRowid);
     const arr = Array.isArray(items) ? items : JSON.parse(items);
     for (const i of arr) {
-      await db.execute({ sql: 'UPDATE vinos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.vino_id] });
+      if (i.producto_id) {
+        await db.execute({ sql: 'UPDATE productos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.producto_id] });
+      } else if (i.vino_id) {
+        await db.execute({ sql: 'UPDATE vinos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.vino_id] });
+      }
     }
     res.json({ id: pedidoId });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/pedidos/:id/estado', async (req, res) => {
+app.put('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
   try {
     await db.execute({ sql: 'UPDATE pedidos SET estado=? WHERE id=?', args: [req.body.estado, req.params.id] });
     res.json({ ok: true });
@@ -211,7 +272,7 @@ app.put('/api/pedidos/:id/estado', async (req, res) => {
 
 // ── STATS ──────────────────────────────────────────────────────────────────
 
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', requireAuth, async (req, res) => {
   try {
     const stats = {};
 

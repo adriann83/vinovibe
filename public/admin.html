@@ -99,14 +99,33 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 </style>
 </head>
 <body>
+
+<!-- LOGIN GATE -->
+<div id="login-gate" style="position:fixed;inset:0;background:#1a1410;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;padding:40px;width:320px;max-width:90vw;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;text-align:center;margin-bottom:4px;color:#1a1410">Vino<span style="color:#B8860B">Vibe</span></div>
+    <div style="text-align:center;font-size:12px;color:#888;margin-bottom:24px">Panel de administración</div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;letter-spacing:.05em;color:#888;display:block;margin-bottom:4px">USUARIO</label>
+      <input id="login-user" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px" placeholder="admin">
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="font-size:11px;letter-spacing:.05em;color:#888;display:block;margin-bottom:4px">CONTRASEÑA</label>
+      <input id="login-pass" type="password" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px" placeholder="••••••••">
+    </div>
+    <button onclick="intentarLogin()" style="width:100%;padding:12px;background:#1a1410;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer">Ingresar</button>
+    <div id="login-error" style="color:#C0392B;font-size:12px;text-align:center;margin-top:12px;display:none">Usuario o contraseña incorrectos</div>
+  </div>
+</div>
+<div id="app-wrap" style="display:none">
 <nav>
   <div class="nav-logo">Vino<span>Vibe</span></div>
+  <div class="nav-mode">
+    <button class="mode-btn active" onclick="setMode('vinoteca',this)">🏪 Vinoteca</button>
+    <button class="mode-btn" onclick="setMode('consumidor',this)">🍷 Consumidor</button>
+    <button class="mode-btn" onclick="cerrarSesion()" style="margin-left:8px">🚪 Salir</button>
+  </div>
 </nav>
-<div class="hero" style="background:linear-gradient(135deg,#3a1f1f,#1a1410);padding:48px 24px;text-align:center;color:#f5f2ee">
-  <div style="font-family:'Cormorant Garamond',serif;font-size:34px;margin-bottom:8px">Bienvenido a tu vinoteca online</div>
-  <div style="font-size:14px;color:rgba(245,242,238,.7);max-width:480px;margin:0 auto 22px">Descubrí vinos, aceites y más, con recomendaciones pensadas para vos. Pedí online y retirá o recibí en casa.</div>
-  <button onclick="irCatalogo()" style="background:#B8860B;color:#1a1410;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer">Ver catálogo</button>
-</div>
 <div class="tabs-bar" id="tabs-bar"></div>
 
 <!-- DASHBOARD -->
@@ -459,13 +478,6 @@ function setMode(modo,btn){
   document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderTabs(modo);
-}
-
-function irCatalogo(){
-  const btns=document.querySelectorAll('.tab-btn');
-  let target=null;
-  btns.forEach(b=>{if(b.getAttribute('onclick').includes("'catalogo'"))target=b;});
-  if(target)showPage('catalogo',target);
 }
 
 function renderTabs(modo){
@@ -983,7 +995,38 @@ async function consultarSommelier(){
   finally{document.getElementById('loading-sommelier').style.display='none';btn.disabled=false;btn.textContent='✦ Pedir recomendación';}
 }
 
-renderTabs('consumidor');
+async function intentarLogin(){
+  const username=document.getElementById('login-user').value;
+  const password=document.getElementById('login-pass').value;
+  const errDiv=document.getElementById('login-error');
+  errDiv.style.display='none';
+  try{
+    const r=await fetch(API+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username,password})});
+    if(!r.ok){errDiv.style.display='block';return;}
+    mostrarApp();
+  }catch(e){errDiv.textContent='Error de conexión';errDiv.style.display='block';}
+}
+
+async function cerrarSesion(){
+  await fetch(API+'/admin/logout',{method:'POST',credentials:'include'});
+  location.reload();
+}
+
+function mostrarApp(){
+  document.getElementById('login-gate').style.display='none';
+  document.getElementById('app-wrap').style.display='block';
+  renderTabs('vinoteca');
+}
+
+async function checkSesion(){
+  try{
+    const r=await fetch(API+'/admin/check',{credentials:'include'}).then(r=>r.json());
+    if(r.isAdmin){mostrarApp();}
+    else{document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')intentarLogin();});}
+  }catch(e){}
+}
+checkSesion();
 </script>
+</div>
 </body>
 </html>
