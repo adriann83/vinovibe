@@ -151,7 +151,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="page-title">Catálogo de Vinos</div>
   <div class="page-sub">Gestioná tu inventario</div>
   <div class="card">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar vino</div>
+    <div id="v-form-titulo" style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar vino</div>
     <div class="form-grid">
       <div class="form-group"><label>Nombre</label><input id="v-nombre" placeholder="Malbec Reserva"></div>
       <div class="form-group"><label>Bodega</label><input id="v-bodega" placeholder="Achaval Ferrer"></div>
@@ -166,7 +166,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="form-group"><label>Dulzor (1-10)</label><input id="v-dulzor" type="number" min="1" max="10" placeholder="2"></div>
       <div class="form-group full"><label>Descripción</label><textarea id="v-descripcion" placeholder="Notas de cata..."></textarea></div>
     </div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="agregarVino()">Agregar vino</button></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="v-btn-guardar" onclick="agregarVino()">Agregar vino</button>
+      <button class="btn btn-sm" id="v-btn-cancelar" style="display:none;background:var(--cream);border:1px solid var(--border)" onclick="cancelarEdicionVino()">Cancelar</button>
+    </div>
   </div>
   <div class="table-wrap"><table>
     <thead><tr><th>Vino</th><th>Bodega</th><th>Varietal</th><th>Añada</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
@@ -179,7 +182,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="page-title">Otros Productos</div>
   <div class="page-sub">Aceites, aceitunas y más</div>
   <div class="card">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar producto</div>
+    <div id="pr-form-titulo" style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar producto</div>
     <div class="form-grid">
       <div class="form-group"><label>Nombre</label><input id="pr-nombre" placeholder="Aceite de oliva extra virgen"></div>
       <div class="form-group"><label>Categoría</label>
@@ -194,7 +197,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="form-group"><label>Stock</label><input id="pr-stock" type="number" placeholder="15"></div>
       <div class="form-group full"><label>Descripción</label><textarea id="pr-descripcion" placeholder="Ej: Botella 500ml, cosecha 2025..."></textarea></div>
     </div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="agregarProducto()">Agregar producto</button></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="pr-btn-guardar" onclick="agregarProducto()">Agregar producto</button>
+      <button class="btn btn-sm" id="pr-btn-cancelar" style="display:none;background:var(--cream);border:1px solid var(--border)" onclick="cancelarEdicionProducto()">Cancelar</button>
+    </div>
   </div>
   <div class="table-wrap"><table>
     <thead><tr><th>Producto</th><th>Categoría</th><th>Marca</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
@@ -858,17 +864,53 @@ async function loadDashboard(){
 async function loadVinos(){
   const v=await fetch(API+'/vinos').then(r=>r.json());
   vinosData=v;
-  document.getElementById('tabla-vinos').innerHTML=v.map(x=>`<tr><td><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></td><td>${x.bodega}</td><td>${x.varietal||'-'}</td><td>${x.anada||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<10?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarFicha(${x.id})">✦ Editar ficha</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarVino(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--smoke)">Sin vinos</td></tr>';
+  document.getElementById('tabla-vinos').innerHTML=v.map(x=>`<tr><td><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></td><td>${x.bodega}</td><td>${x.varietal||'-'}</td><td>${x.anada||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<10?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarVino(${x.id})">✎ Editar datos</button><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarFicha(${x.id})">✦ Editar ficha</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarVino(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--smoke)">Sin vinos</td></tr>';
   const sel=document.getElementById('p-vino-sel');
   if(sel)sel.innerHTML=v.map(x=>`<option value="${x.id}" data-precio="${x.precio}">${x.nombre} — ${x.bodega} ($${Number(x.precio).toLocaleString('es-AR')})</option>`).join('');
+}
+
+let vinoEditandoId=null;
+
+function editarVino(id){
+  const v=vinosData.find(x=>x.id===id);
+  if(!v)return;
+  vinoEditandoId=id;
+  document.getElementById('v-nombre').value=v.nombre||'';
+  document.getElementById('v-bodega').value=v.bodega||'';
+  document.getElementById('v-region').value=v.region||'';
+  document.getElementById('v-varietal').value=v.varietal||'';
+  document.getElementById('v-anada').value=v.anada||'';
+  document.getElementById('v-precio').value=v.precio||'';
+  document.getElementById('v-stock').value=v.stock||'';
+  document.getElementById('v-tanino').value=v.tanino||5;
+  document.getElementById('v-acidez').value=v.acidez||5;
+  document.getElementById('v-cuerpo').value=v.cuerpo||5;
+  document.getElementById('v-dulzor').value=v.dulzor||2;
+  document.getElementById('v-descripcion').value=v.descripcion||'';
+  document.getElementById('v-form-titulo').textContent='Editar vino';
+  document.getElementById('v-btn-guardar').textContent='Guardar cambios';
+  document.getElementById('v-btn-cancelar').style.display='inline-block';
+  document.getElementById('v-nombre').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelarEdicionVino(){
+  vinoEditandoId=null;
+  ['v-nombre','v-bodega','v-region','v-varietal','v-anada','v-precio','v-stock','v-tanino','v-acidez','v-cuerpo','v-dulzor','v-descripcion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('v-form-titulo').textContent='Agregar vino';
+  document.getElementById('v-btn-guardar').textContent='Agregar vino';
+  document.getElementById('v-btn-cancelar').style.display='none';
 }
 
 async function agregarVino(){
   const b={nombre:document.getElementById('v-nombre').value,bodega:document.getElementById('v-bodega').value,region:document.getElementById('v-region').value,varietal:document.getElementById('v-varietal').value,anada:document.getElementById('v-anada').value,precio:document.getElementById('v-precio').value,stock:document.getElementById('v-stock').value,tanino:document.getElementById('v-tanino').value||5,acidez:document.getElementById('v-acidez').value||5,cuerpo:document.getElementById('v-cuerpo').value||5,dulzor:document.getElementById('v-dulzor').value||2,descripcion:document.getElementById('v-descripcion').value};
   if(!b.nombre||!b.bodega)return alert('Nombre y bodega son obligatorios');
-  const r=await fetch(API+'/vinos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  const editando=vinoEditandoId!==null;
+  const url=editando?(API+'/vinos/'+vinoEditandoId):(API+'/vinos');
+  const method=editando?'PUT':'POST';
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
   if(r.status===401){alert('Tu sesión venció. Volvé a entrar.');location.reload();return;}
   if(!r.ok){alert('Error al guardar el vino. Probá de nuevo.');return;}
+  if(editando)cancelarEdicionVino();
   loadVinos();
 }
 
@@ -878,20 +920,56 @@ async function eliminarVino(id){
   loadVinos();
 }
 
+let productosData=[];
+let productoEditandoId=null;
+
 async function loadProductos(){
   const p=await fetch(API+'/productos').then(r=>r.json());
-  document.getElementById('tabla-productos').innerHTML=p.map(x=>`<tr><td><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></td><td>${x.categoria}</td><td>${x.marca||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<5?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-danger btn-sm" onclick="eliminarProducto(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--smoke)">Sin productos cargados</td></tr>';
+  productosData=p;
+  document.getElementById('tabla-productos').innerHTML=p.map(x=>`<tr><td><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></td><td>${x.categoria}</td><td>${x.marca||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<5?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarProducto(${x.id})">✎ Editar</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarProducto(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--smoke)">Sin productos cargados</td></tr>';
+}
+
+function editarProducto(id){
+  const p=productosData.find(x=>x.id===id);
+  if(!p)return;
+  productoEditandoId=id;
+  document.getElementById('pr-nombre').value=p.nombre||'';
+  document.getElementById('pr-categoria').value=p.categoria||'Aceite de oliva';
+  document.getElementById('pr-marca').value=p.marca||'';
+  document.getElementById('pr-precio').value=p.precio||'';
+  document.getElementById('pr-stock').value=p.stock||'';
+  document.getElementById('pr-descripcion').value=p.descripcion||'';
+  document.getElementById('pr-form-titulo').textContent='Editar producto';
+  document.getElementById('pr-btn-guardar').textContent='Guardar cambios';
+  document.getElementById('pr-btn-cancelar').style.display='inline-block';
+  document.getElementById('pr-nombre').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelarEdicionProducto(){
+  productoEditandoId=null;
+  ['pr-nombre','pr-marca','pr-precio','pr-stock','pr-descripcion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pr-form-titulo').textContent='Agregar producto';
+  document.getElementById('pr-btn-guardar').textContent='Agregar producto';
+  document.getElementById('pr-btn-cancelar').style.display='none';
 }
 
 async function agregarProducto(){
   const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
-  await fetch(API+'/productos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-  document.getElementById('pr-nombre').value='';
-  document.getElementById('pr-marca').value='';
-  document.getElementById('pr-precio').value='';
-  document.getElementById('pr-stock').value='';
-  document.getElementById('pr-descripcion').value='';
+  const editando=productoEditandoId!==null;
+  const url=editando?(API+'/productos/'+productoEditandoId):(API+'/productos');
+  const method=editando?'PUT':'POST';
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if(r.status===401){alert('Tu sesión venció. Volvé a entrar.');location.reload();return;}
+  if(!r.ok){alert('Error al guardar. Probá de nuevo.');return;}
+  if(editando)cancelarEdicionProducto();
+  else{
+    document.getElementById('pr-nombre').value='';
+    document.getElementById('pr-marca').value='';
+    document.getElementById('pr-precio').value='';
+    document.getElementById('pr-stock').value='';
+    document.getElementById('pr-descripcion').value='';
+  }
   loadProductos();
 }
 

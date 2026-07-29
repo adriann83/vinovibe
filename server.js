@@ -170,6 +170,17 @@ app.delete('/api/vinos/:id', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/vinos/:id', requireAuth, async (req, res) => {
+  const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion } = req.body;
+  try {
+    await db.execute({
+      sql: `UPDATE vinos SET nombre=?,bodega=?,region=?,varietal=?,anada=?,precio=?,stock=?,tanino=?,acidez=?,cuerpo=?,dulzor=?,descripcion=? WHERE id=?`,
+      args: [nombre, bodega, region, varietal, anada, precio, stock, tanino||5, acidez||5, cuerpo||5, dulzor||2, descripcion, req.params.id]
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.put('/api/vinos/:id/ficha', requireAuth, async (req, res) => {
   const { historia_bodega, notas_enologo, maridaje, temperatura, decantacion } = req.body;
   const extra = JSON.stringify({ historia_bodega, maridaje, temperatura, decantacion });
@@ -200,6 +211,18 @@ app.post('/api/productos', requireAuth, async (req, res) => {
       args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null]
     });
     res.json({ id: Number(result.lastInsertRowid) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/productos/:id', requireAuth, async (req, res) => {
+  const { nombre, categoria, marca, precio, stock, descripcion } = req.body;
+  if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
+  try {
+    await db.execute({
+      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=? WHERE id=?`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, req.params.id]
+    });
+    res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
