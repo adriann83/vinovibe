@@ -813,8 +813,8 @@ function renderItemsMiPedido(){
   itemsDiv.innerHTML=itemsMiPedido.map((x,i)=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
       <div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--ink)">${x.nombre}</div>
-        <div style="font-size:12px;color:var(--smoke)">$${x.precio.toLocaleString('es-AR')} c/u</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--dark)">${x.nombre}</div>
+        <div style="font-size:13px;color:var(--ink)">$${x.precio.toLocaleString('es-AR')} c/u</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <button onclick="cambiarCantidadCarrito(${i},-1)" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer">−</button>
