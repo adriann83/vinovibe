@@ -357,18 +357,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <!-- MIS PEDIDOS -->
 <div id="page-mis-pedidos" class="page">
-  <div class="page-title">Mis Pedidos</div>
-  <div class="page-sub">Pedí directo a la vinoteca</div>
+  <div class="page-title">Mi Carrito</div>
+  <div class="page-sub">Revisá tu pedido antes de confirmar</div>
   <div class="card">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Nuevo pedido</div>
+    <div id="carrito-vacio" style="text-align:center;color:var(--smoke);padding:20px 0">
+      Todavía no agregaste nada. Andá al <strong>Catálogo</strong> o <strong>Aceites y más</strong> y tocá "+ Pedir" en lo que te guste.
+    </div>
+    <div id="carrito-items"></div>
+    <div id="carrito-total" style="text-align:right;font-size:18px;font-weight:600;color:var(--garnet);margin-top:10px;display:none"></div>
+  </div>
+  <div class="card" id="carrito-checkout" style="display:none">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Finalizar pedido</div>
     <div class="form-grid">
       <div class="form-group"><label>Tu nombre</label><input id="mp-cliente" placeholder="Tu nombre"></div>
       <div class="form-group"><label>Entrega</label><select id="mp-tipo"><option value="retiro">🏪 Retiro en vinoteca</option><option value="envio">🚚 Envío a domicilio</option></select></div>
-      <div class="form-group full"><label>Vino</label><select id="mp-vino-sel"></select></div>
-      <div class="form-group"><label>Cantidad</label><input id="mp-cantidad" type="number" value="1" min="1"></div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-gold" onclick="agregarItemMiPedido()">+ Agregar vino</button>
       <button class="btn btn-primary" onclick="confirmarMiPedido()">✓ Confirmar pedido</button>
     </div>
     <div id="mp-items" style="margin-top:10px;font-size:12px;color:var(--smoke)"></div>
@@ -451,7 +455,7 @@ const tabsConsumidor=[
   {id:'recomendaciones',label:'✦ Recomendaciones'},
   {id:'catalogo',label:'🍷 Catálogo'},
   {id:'productos-catalogo',label:'🫒 Aceites y más'},
-  {id:'mis-pedidos',label:'📦 Mis Pedidos'},
+  {id:'mis-pedidos',label:'🛒 Mi Carrito'},
   {id:'diario',label:'📓 Diario'},
 ];
 
@@ -584,8 +588,7 @@ function renderCatalogo(vinos){
           <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
           <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${match}% match</div>
         </div>
-        <div style="font-size:11px;color:var(--smoke);margin-bottom:4px">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'} ${v.anada?'· '+v.anada:''}</div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:10px">${v.descripcion||''}</div>
+        <div style="font-size:11px;color:var(--smoke);margin-bottom:10px">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'} ${v.anada?'· '+v.anada:''}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:${stockColor};font-weight:500">${v.stock>0?'● '+v.stock+' disponibles':'✕ Sin stock'}</div>
@@ -738,45 +741,72 @@ async function guardarFichaVino(){
 
 // ── MIS PEDIDOS ──
 async function loadMisPedidos(){
-  await loadCatalogo();
+  renderItemsMiPedido();
   if(perfilGuardado?.nombre)document.getElementById('mp-cliente').value=perfilGuardado.nombre;
   renderMiHistorial();
 }
 
-function agregarItemMiPedido(){
-  const sel=document.getElementById('mp-vino-sel');
-  const id=parseInt(sel.value);
-  const cant=parseInt(document.getElementById('mp-cantidad').value)||1;
-  const opt=sel.options[sel.selectedIndex];
-  const nombre=opt.dataset.nombre||opt.text.split('—')[0].trim();
-  const precio=parseFloat(opt.dataset.precio);
-  const ex=itemsMiPedido.find(x=>x.vino_id===id);
-  if(ex)ex.cantidad+=cant;
-  else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:cant});
+function renderItemsMiPedido(){
+  const vacio=document.getElementById('carrito-vacio');
+  const itemsDiv=document.getElementById('carrito-items');
+  const totalDiv=document.getElementById('carrito-total');
+  const checkout=document.getElementById('carrito-checkout');
+  if(!vacio)return; // por si se llama antes de que exista la página
+
+  if(!itemsMiPedido.length){
+    vacio.style.display='block';
+    itemsDiv.innerHTML='';
+    totalDiv.style.display='none';
+    checkout.style.display='none';
+    return;
+  }
+  vacio.style.display='none';
+  checkout.style.display='block';
+  const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
+  itemsDiv.innerHTML=itemsMiPedido.map((x,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--ink)">${x.nombre}</div>
+        <div style="font-size:12px;color:var(--smoke)">$${x.precio.toLocaleString('es-AR')} c/u</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="cambiarCantidadCarrito(${i},-1)" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer">−</button>
+        <span style="min-width:18px;text-align:center">${x.cantidad}</span>
+        <button onclick="cambiarCantidadCarrito(${i},1)" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer">+</button>
+        <button onclick="quitarDelCarrito(${i})" style="margin-left:8px;color:#C0392B;background:none;border:none;cursor:pointer;font-size:16px" title="Quitar">✕</button>
+      </div>
+    </div>`).join('');
+  totalDiv.style.display='block';
+  totalDiv.textContent='Total: $'+total.toLocaleString('es-AR');
+}
+
+function cambiarCantidadCarrito(i,delta){
+  itemsMiPedido[i].cantidad+=delta;
+  if(itemsMiPedido[i].cantidad<1)itemsMiPedido.splice(i,1);
   renderItemsMiPedido();
 }
 
-function renderItemsMiPedido(){
-  const div=document.getElementById('mp-items');
-  if(!itemsMiPedido.length){div.innerHTML='';return;}
-  const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
-  div.innerHTML='<strong>Pedido actual:</strong><br>'+itemsMiPedido.map(x=>`• ${x.nombre} × ${x.cantidad} — $${(x.precio*x.cantidad).toLocaleString('es-AR')}`).join('<br>')+`<br><br><strong>Total: $${total.toLocaleString('es-AR')}</strong>`;
+function quitarDelCarrito(i){
+  itemsMiPedido.splice(i,1);
+  renderItemsMiPedido();
 }
 
 async function confirmarMiPedido(){
   const cliente=document.getElementById('mp-cliente').value;
   const tipo=document.getElementById('mp-tipo').value;
   if(!cliente)return alert('Ingresá tu nombre');
-  if(!itemsMiPedido.length)return alert('Agregá al menos un vino');
+  if(!itemsMiPedido.length)return alert('Tu carrito está vacío');
   const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
   const items=[...itemsMiPedido];
   await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,items,total,tipo})});
   const historial=JSON.parse(localStorage.getItem('mis_pedidos')||'[]');
   historial.unshift({fecha:new Date().toISOString(),cliente,tipo,total,items});
   localStorage.setItem('mis_pedidos',JSON.stringify(historial.slice(0,20)));
-  mostrarBotonWhatsapp(cliente,tipo,items,total);
   itemsMiPedido=[];
-  renderItemsMiPedido();
+  document.getElementById('carrito-items').innerHTML='';
+  document.getElementById('carrito-total').style.display='none';
+  document.getElementById('carrito-vacio').style.display='none';
+  mostrarBotonWhatsapp(cliente,tipo,items,total);
   renderMiHistorial();
 }
 
