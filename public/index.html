@@ -344,6 +344,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <option value="Torrontés">Torrontés</option>
       <option value="Blend">Blend</option>
     </select>
+    <input id="cat-precio-min" type="number" placeholder="Precio mín" style="width:110px" oninput="filtrarCatalogo()">
+    <input id="cat-precio-max" type="number" placeholder="Precio máx" style="width:110px" oninput="filtrarCatalogo()">
   </div>
   <div id="catalogo-grid"></div>
 </div>
@@ -352,6 +354,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="page-productos-catalogo" class="page">
   <div class="page-title">Aceites, Aceitunas y Más</div>
   <div class="page-sub">Otros productos disponibles en la vinoteca</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <input id="prod-buscar" placeholder="🔍 Buscar producto o marca..." style="flex:1;min-width:200px" oninput="filtrarProductosCatalogo()">
+    <select id="prod-categoria" onchange="filtrarProductosCatalogo()">
+      <option value="">Todas las categorías</option>
+      <option value="Aceite de oliva">Aceite de oliva</option>
+      <option value="Aceitunas">Aceitunas</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <input id="prod-precio-min" type="number" placeholder="Precio mín" style="width:110px" oninput="filtrarProductosCatalogo()">
+    <input id="prod-precio-max" type="number" placeholder="Precio máx" style="width:110px" oninput="filtrarProductosCatalogo()">
+  </div>
   <div id="productos-catalogo-grid"></div>
 </div>
 
@@ -441,6 +454,7 @@ let perfilLocal={tanino:5,acidez:5,cuerpo:5,dulzor:2};
 let catasLocal=JSON.parse(localStorage.getItem('vinovibe_catas')||'[]');
 let perfilGuardado=JSON.parse(localStorage.getItem('vinovibe_perfil')||'null');
 let todosLosVinos=[];
+let todosLosProductos=[];
 
 const tabsVinoteca=[
   {id:'dashboard',label:'📊 Dashboard'},
@@ -570,7 +584,14 @@ async function loadCatalogo(){
 function filtrarCatalogo(){
   const buscar=document.getElementById('cat-buscar').value.toLowerCase();
   const varietal=document.getElementById('cat-varietal').value;
-  renderCatalogo(todosLosVinos.filter(v=>(!buscar||v.nombre.toLowerCase().includes(buscar)||v.bodega.toLowerCase().includes(buscar))&&(!varietal||v.varietal===varietal)));
+  const precioMin=parseFloat(document.getElementById('cat-precio-min').value)||0;
+  const precioMaxInput=document.getElementById('cat-precio-max').value;
+  const precioMax=precioMaxInput?parseFloat(precioMaxInput):Infinity;
+  renderCatalogo(todosLosVinos.filter(v=>
+    (!buscar||v.nombre.toLowerCase().includes(buscar)||v.bodega.toLowerCase().includes(buscar))
+    &&(!varietal||v.varietal===varietal)
+    &&(v.precio>=precioMin&&v.precio<=precioMax)
+  ));
 }
 
 function renderCatalogo(vinos){
@@ -592,9 +613,10 @@ function renderCatalogo(vinos){
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:${stockColor};font-weight:500">${v.stock>0?'● '+v.stock+' disponibles':'✕ Sin stock'}</div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;align-items:center">
             <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaVino(${v.id})">📋 Ficha</button>
-            <button class="btn btn-gold btn-sm" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio})" ${v.stock===0?'disabled':''}>+ Pedir</button>
+            ${v.stock>0?`<input id="qty-vino-${v.id}" type="number" value="1" min="1" max="${v.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
+            <button class="btn btn-gold btn-sm" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock})" ${v.stock===0?'disabled':''}>+ Pedir</button>
           </div>
         </div>
       </div>
@@ -602,22 +624,40 @@ function renderCatalogo(vinos){
   }).join('');
 }
 
-function agregarAlPedidoRapido(id,nombre,precio){
+function agregarAlPedidoRapido(id,nombre,precio,stock){
+  const qtyInput=document.getElementById('qty-vino-'+id);
+  let cant=qtyInput?parseInt(qtyInput.value)||1:1;
+  if(stock!==undefined&&cant>stock)cant=stock;
+  if(cant<1)cant=1;
   const ex=itemsMiPedido.find(x=>x.vino_id===id);
-  if(ex)ex.cantidad++;
-  else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:1});
-  alert('✓ '+nombre+' agregado al pedido');
+  if(ex)ex.cantidad+=cant;
+  else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:cant});
+  alert('✓ '+nombre+' x'+cant+' agregado al pedido');
 }
 
 // ── CATÁLOGO PRODUCTOS (aceites, aceitunas, etc.) ──
 async function loadProductosCatalogo(){
   const productos=await fetch(API+'/productos').then(r=>r.json());
+  todosLosProductos=productos;
   renderProductosCatalogo(productos);
+}
+
+function filtrarProductosCatalogo(){
+  const buscar=document.getElementById('prod-buscar').value.toLowerCase();
+  const categoria=document.getElementById('prod-categoria').value;
+  const precioMin=parseFloat(document.getElementById('prod-precio-min').value)||0;
+  const precioMaxInput=document.getElementById('prod-precio-max').value;
+  const precioMax=precioMaxInput?parseFloat(precioMaxInput):Infinity;
+  renderProductosCatalogo(todosLosProductos.filter(p=>
+    (!buscar||p.nombre.toLowerCase().includes(buscar)||(p.marca||'').toLowerCase().includes(buscar))
+    &&(!categoria||p.categoria===categoria)
+    &&(p.precio>=precioMin&&p.precio<=precioMax)
+  ));
 }
 
 function renderProductosCatalogo(productos){
   const grid=document.getElementById('productos-catalogo-grid');
-  if(!productos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">Todavía no hay otros productos cargados</div>';return;}
+  if(!productos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">No se encontraron productos</div>';return;}
   grid.innerHTML=productos.map(p=>{
     const stockColor=p.stock<5?'#C0392B':p.stock<15?'#E8A020':'#256B25';
     return`<div class="vino-card">
@@ -631,18 +671,25 @@ function renderProductosCatalogo(productos){
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(p.precio).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:${stockColor};font-weight:500">${p.stock>0?'● '+p.stock+' disponibles':'✕ Sin stock'}</div>
-          <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio})" ${p.stock===0?'disabled':''}>+ Pedir</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${p.stock>0?`<input id="qty-prod-${p.id}" type="number" value="1" min="1" max="${p.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
+            <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock})" ${p.stock===0?'disabled':''}>+ Pedir</button>
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
 }
 
-function agregarProductoAlPedidoRapido(id,nombre,precio){
+function agregarProductoAlPedidoRapido(id,nombre,precio,stock){
+  const qtyInput=document.getElementById('qty-prod-'+id);
+  let cant=qtyInput?parseInt(qtyInput.value)||1:1;
+  if(stock!==undefined&&cant>stock)cant=stock;
+  if(cant<1)cant=1;
   const ex=itemsMiPedido.find(x=>x.producto_id===id);
-  if(ex)ex.cantidad++;
-  else itemsMiPedido.push({producto_id:id,nombre,precio,cantidad:1});
-  alert('✓ '+nombre+' agregado al pedido');
+  if(ex)ex.cantidad+=cant;
+  else itemsMiPedido.push({producto_id:id,nombre,precio,cantidad:cant});
+  alert('✓ '+nombre+' x'+cant+' agregado al pedido');
 }
 
 // ── FICHA VINO ──
