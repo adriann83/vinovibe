@@ -5,6 +5,8 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@libsql/client');
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const app = express();
 
@@ -331,44 +333,69 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
 // ── SOMMELIER ──────────────────────────────────────────────────────────────
 
-app.post('/api/sommelier', (req, res) => {
+app.post('/api/sommelier', async (req, res) => {
   const { perfil, contexto, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });
+  const p = perfil || { tanino: 5, acidez: 5, cuerpo: 5, dulzor: 5 };
 
-  const scored = vinos.map(v => {
-    const diff =
-      Math.abs(v.tanino - perfil.tanino) +
-      Math.abs(v.acidez - perfil.acidez) +
-      Math.abs(v.cuerpo - perfil.cuerpo) +
-      Math.abs(v.dulzor - perfil.dulzor);
-    const match = Math.round(100 - (diff / 40) * 100);
-    return { ...v, match };
-  }).sort((a, b) => b.match - a.match);
-
-  const mejor = scored[0];
-  const notas = mejor.descripcion || 'Excelente equilibrio y carácter.';
-  const ctx = contexto ? ` Ideal para ${contexto}.` : '';
-  const razon = `${notas}${ctx} Con un perfil de tanino ${mejor.tanino}/10 y cuerpo ${mejor.cuerpo}/10, es la mejor opción de tu catálogo para este cliente.`;
-
-  const maridajes = {
-    'Malbec': 'Carnes rojas, asado, quesos duros',
-    'Cabernet Sauvignon': 'Cordero, costillas, pasta con carne',
-    'Chardonnay': 'Pollo, pescado, mariscos, pasta con crema',
-    'Torrontés': 'Mariscos, comida picante, ensaladas',
-    'Blend': 'Carnes rojas, guisos, quesos maduros',
+  const fallback = () => {
+    const scored = vinos.map(v => {
+      const diff = Math.abs(v.tanino - p.tanino) + Math.abs(v.acidez - p.acidez) + Math.abs(v.cuerpo - p.cuerpo) + Math.abs(v.dulzor - p.dulzor);
+      return { ...v, match: Math.max(60, Math.round(100 - (diff / 40) * 100)) };
+    }).sort((a, b) => b.match - a.match);
+    const mejor = scored[0];
+    return {
+      vino_recomendado: mejor.nombre,
+      bodega: mejor.bodega,
+      match_porcentaje: mejor.match,
+      razon: mejor.descripcion || 'Buena opción de nuestro catálogo para tu perfil.',
+      maridaje: 'Carnes rojas y quesos maduros'
+    };
   };
-  const maridaje = maridajes[mejor.varietal] || 'Carnes rojas y quesos maduros';
 
-  res.json({
-    vino_recomendado: mejor.nombre,
-    bodega: mejor.bodega,
-    match_porcentaje: Math.max(mejor.match, 60),
-    razon,
-    maridaje
-  });
+  try {
+    const catalogoTexto = vinos.map(v =>
+      `- id:${v.id} | ${v.nombre} (${v.bodega}) | Varietal: ${v.varietal || '-'} | Tanino:${v.tanino} Acidez:${v.acidez} Cuerpo:${v.cuerpo} Dulzor:${v.dulzor} | Stock:${v.stock} | Notas: ${v.descripcion || 'sin notas'}`
+    ).join('\n');
+
+    const prompt = `Sos un sommelier experto ayudando a elegir el mejor vino de este catálogo específico para un cliente.
+
+CATÁLOGO DISPONIBLE:
+${catalogoTexto}
+
+PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
+
+${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá en base a su perfil de sabor.'}
+
+Elegí el vino MÁS ADECUADO de la lista de arriba (solo de esa lista, usando su id exacto) considerando tanto el perfil de sabor como lo que el cliente pidió. Si mencionó una comida o maridaje, priorizá eso por sobre el perfil numérico.
+
+Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, con este formato exacto:
+{"id": <id del vino elegido>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es la mejor opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": "<breve sugerencia de maridaje, 3-6 palabras>"}`;
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-5',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '{}';
+    const limpio = textoRespuesta.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(limpio);
+    const elegido = vinos.find(v => v.id === data.id);
+    if (!elegido) throw new Error('El vino elegido por la IA no está en el catálogo');
+
+    res.json({
+      vino_recomendado: elegido.nombre,
+      bodega: elegido.bodega,
+      match_porcentaje: data.match_porcentaje || 85,
+      razon: data.razon || '',
+      maridaje: data.maridaje || ''
+    });
+  } catch (err) {
+    console.error('Error en sommelier IA, usando respaldo:', err.message);
+    res.json(fallback());
+  }
 });
-
-// ── START ────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
 initDb()
