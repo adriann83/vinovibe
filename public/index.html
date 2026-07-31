@@ -327,6 +327,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="page-recomendaciones" class="page">
   <div class="page-title">Mis Recomendaciones</div>
   <div class="page-sub">Vinos seleccionados para tu perfil</div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">✦ Preguntale al Sommelier</div>
+    <div style="font-size:12px;color:var(--smoke);margin-bottom:12px">Contanos qué vas a comer, o qué buscás, y te recomendamos el vino ideal de nuestro catálogo.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="som-pregunta" placeholder="Ej: hoy ceno pastas con salsa bolognesa" style="flex:1;min-width:220px">
+      <button class="btn btn-primary" id="btn-som-consumidor" onclick="preguntarSommelierConsumidor()">Preguntar</button>
+    </div>
+    <div id="loading-som-consumidor" style="display:none;text-align:center;padding:14px;color:var(--smoke);font-size:13px">Pensando la mejor recomendación...</div>
+    <div id="resultado-som-consumidor" style="display:none;margin-top:16px;padding:16px;background:var(--dark);border-radius:10px;color:#fff"></div>
+  </div>
+
   <div id="recomendaciones-grid"></div>
 </div>
 
@@ -543,6 +555,30 @@ function loadPerfil(){
 }
 
 // ── RECOMENDACIONES ──
+async function preguntarSommelierConsumidor(){
+  const pregunta=document.getElementById('som-pregunta').value.trim();
+  if(!pregunta)return alert('Contanos qué buscás o qué vas a comer');
+  const btn=document.getElementById('btn-som-consumidor');
+  btn.disabled=true;btn.textContent='Consultando...';
+  document.getElementById('loading-som-consumidor').style.display='block';
+  document.getElementById('resultado-som-consumidor').style.display='none';
+  try{
+    const vinos=await fetch(API+'/vinos').then(r=>r.json());
+    if(!vinos.length){alert('Todavía no hay vinos cargados en el catálogo');return;}
+    const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
+    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,vinos})});
+    const d=await r.json();
+    const div=document.getElementById('resultado-som-consumidor');
+    div.style.display='block';
+    div.innerHTML=`<div style="display:inline-block;background:rgba(196,163,90,.2);color:#C4A35A;font-size:11px;font-weight:600;padding:4px 10px;border-radius:50px;margin-bottom:8px">✦ ${d.match_porcentaje}% match</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${d.vino_recomendado}</div><div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${d.bodega}</div><div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${d.razon}</div><div style="font-size:12px;color:#C4A35A">🍽️ ${d.maridaje}</div>`;
+  }catch(e){
+    alert('No pudimos consultar al sommelier. Probá de nuevo.');
+  }finally{
+    document.getElementById('loading-som-consumidor').style.display='none';
+    btn.disabled=false;btn.textContent='Preguntar';
+  }
+}
+
 async function loadRecomendaciones(){
   const grid=document.getElementById('recomendaciones-grid');
   grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--smoke)">Cargando...</div>';
