@@ -164,6 +164,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="form-group"><label>Acidez (1-10)</label><input id="v-acidez" type="number" min="1" max="10" placeholder="5"></div>
       <div class="form-group"><label>Cuerpo (1-10)</label><input id="v-cuerpo" type="number" min="1" max="10" placeholder="8"></div>
       <div class="form-group"><label>Dulzor (1-10)</label><input id="v-dulzor" type="number" min="1" max="10" placeholder="2"></div>
+      <div class="form-group full">
+        <label>Foto del vino (opcional)</label>
+        <input type="hidden" id="v-foto">
+        <input type="file" id="v-foto-file" accept="image/*" onchange="subirFoto('v-foto-file','v-foto','v-foto-preview','v-foto-status')">
+        <div id="v-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
+        <img id="v-foto-preview" style="display:none;margin-top:8px;width:80px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+      </div>
       <div class="form-group full"><label>Descripción</label><textarea id="v-descripcion" placeholder="Notas de cata..."></textarea></div>
     </div>
     <div class="btn-row">
@@ -195,6 +202,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="form-group"><label>Marca</label><input id="pr-marca" placeholder="Ej: Laur, Nucete..."></div>
       <div class="form-group"><label>Precio ($)</label><input id="pr-precio" type="number" placeholder="4500"></div>
       <div class="form-group"><label>Stock</label><input id="pr-stock" type="number" placeholder="15"></div>
+      <div class="form-group full">
+        <label>Foto del producto (opcional)</label>
+        <input type="hidden" id="pr-foto">
+        <input type="file" id="pr-foto-file" accept="image/*" onchange="subirFoto('pr-foto-file','pr-foto','pr-foto-preview','pr-foto-status')">
+        <div id="pr-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
+        <img id="pr-foto-preview" style="display:none;margin-top:8px;width:80px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+      </div>
       <div class="form-group full"><label>Descripción</label><textarea id="pr-descripcion" placeholder="Ej: Botella 500ml, cosecha 2025..."></textarea></div>
     </div>
     <div class="btn-row">
@@ -869,6 +883,35 @@ async function loadVinos(){
   if(sel)sel.innerHTML=v.map(x=>`<option value="${x.id}" data-precio="${x.precio}">${x.nombre} — ${x.bodega} ($${Number(x.precio).toLocaleString('es-AR')})</option>`).join('');
 }
 
+const CLOUDINARY_CLOUD_NAME='pslvlqpb';
+const CLOUDINARY_PRESET='vinovibe';
+
+async function subirFoto(fileInputId,hiddenInputId,previewId,statusId){
+  const fileInput=document.getElementById(fileInputId);
+  const file=fileInput.files[0];
+  if(!file)return;
+  const statusDiv=document.getElementById(statusId);
+  statusDiv.textContent='Subiendo foto...';
+  statusDiv.style.color='var(--smoke)';
+  try{
+    const formData=new FormData();
+    formData.append('file',file);
+    formData.append('upload_preset',CLOUDINARY_PRESET);
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,{method:'POST',body:formData});
+    const data=await r.json();
+    if(!data.secure_url)throw new Error('No se pudo subir la foto');
+    document.getElementById(hiddenInputId).value=data.secure_url;
+    const preview=document.getElementById(previewId);
+    preview.src=data.secure_url;
+    preview.style.display='block';
+    statusDiv.textContent='✓ Foto lista';
+    statusDiv.style.color='#256B25';
+  }catch(e){
+    statusDiv.textContent='✕ Error al subir la foto. Probá de nuevo.';
+    statusDiv.style.color='#C0392B';
+  }
+}
+
 let vinoEditandoId=null;
 
 function editarVino(id){
@@ -887,6 +930,10 @@ function editarVino(id){
   document.getElementById('v-cuerpo').value=v.cuerpo||5;
   document.getElementById('v-dulzor').value=v.dulzor||2;
   document.getElementById('v-descripcion').value=v.descripcion||'';
+  document.getElementById('v-foto').value=v.foto_url||'';
+  const vPreview=document.getElementById('v-foto-preview');
+  if(v.foto_url){vPreview.src=v.foto_url;vPreview.style.display='block';}else{vPreview.style.display='none';}
+  document.getElementById('v-foto-status').textContent='';
   document.getElementById('v-form-titulo').textContent='Editar vino';
   document.getElementById('v-btn-guardar').textContent='Guardar cambios';
   document.getElementById('v-btn-cancelar').style.display='inline-block';
@@ -895,14 +942,17 @@ function editarVino(id){
 
 function cancelarEdicionVino(){
   vinoEditandoId=null;
-  ['v-nombre','v-bodega','v-region','v-varietal','v-anada','v-precio','v-stock','v-tanino','v-acidez','v-cuerpo','v-dulzor','v-descripcion'].forEach(id=>document.getElementById(id).value='');
+  ['v-nombre','v-bodega','v-region','v-varietal','v-anada','v-precio','v-stock','v-tanino','v-acidez','v-cuerpo','v-dulzor','v-descripcion','v-foto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('v-foto-file').value='';
+  document.getElementById('v-foto-preview').style.display='none';
+  document.getElementById('v-foto-status').textContent='';
   document.getElementById('v-form-titulo').textContent='Agregar vino';
   document.getElementById('v-btn-guardar').textContent='Agregar vino';
   document.getElementById('v-btn-cancelar').style.display='none';
 }
 
 async function agregarVino(){
-  const b={nombre:document.getElementById('v-nombre').value,bodega:document.getElementById('v-bodega').value,region:document.getElementById('v-region').value,varietal:document.getElementById('v-varietal').value,anada:document.getElementById('v-anada').value,precio:document.getElementById('v-precio').value,stock:document.getElementById('v-stock').value,tanino:document.getElementById('v-tanino').value||5,acidez:document.getElementById('v-acidez').value||5,cuerpo:document.getElementById('v-cuerpo').value||5,dulzor:document.getElementById('v-dulzor').value||2,descripcion:document.getElementById('v-descripcion').value};
+  const b={nombre:document.getElementById('v-nombre').value,bodega:document.getElementById('v-bodega').value,region:document.getElementById('v-region').value,varietal:document.getElementById('v-varietal').value,anada:document.getElementById('v-anada').value,precio:document.getElementById('v-precio').value,stock:document.getElementById('v-stock').value,tanino:document.getElementById('v-tanino').value||5,acidez:document.getElementById('v-acidez').value||5,cuerpo:document.getElementById('v-cuerpo').value||5,dulzor:document.getElementById('v-dulzor').value||2,descripcion:document.getElementById('v-descripcion').value,foto_url:document.getElementById('v-foto').value};
   if(!b.nombre||!b.bodega)return alert('Nombre y bodega son obligatorios');
   const editando=vinoEditandoId!==null;
   const url=editando?(API+'/vinos/'+vinoEditandoId):(API+'/vinos');
@@ -939,6 +989,10 @@ function editarProducto(id){
   document.getElementById('pr-precio').value=p.precio||'';
   document.getElementById('pr-stock').value=p.stock||'';
   document.getElementById('pr-descripcion').value=p.descripcion||'';
+  document.getElementById('pr-foto').value=p.foto_url||'';
+  const prPreview=document.getElementById('pr-foto-preview');
+  if(p.foto_url){prPreview.src=p.foto_url;prPreview.style.display='block';}else{prPreview.style.display='none';}
+  document.getElementById('pr-foto-status').textContent='';
   document.getElementById('pr-form-titulo').textContent='Editar producto';
   document.getElementById('pr-btn-guardar').textContent='Guardar cambios';
   document.getElementById('pr-btn-cancelar').style.display='inline-block';
@@ -947,14 +1001,17 @@ function editarProducto(id){
 
 function cancelarEdicionProducto(){
   productoEditandoId=null;
-  ['pr-nombre','pr-marca','pr-precio','pr-stock','pr-descripcion'].forEach(id=>document.getElementById(id).value='');
+  ['pr-nombre','pr-marca','pr-precio','pr-stock','pr-descripcion','pr-foto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pr-foto-file').value='';
+  document.getElementById('pr-foto-preview').style.display='none';
+  document.getElementById('pr-foto-status').textContent='';
   document.getElementById('pr-form-titulo').textContent='Agregar producto';
   document.getElementById('pr-btn-guardar').textContent='Agregar producto';
   document.getElementById('pr-btn-cancelar').style.display='none';
 }
 
 async function agregarProducto(){
-  const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value};
+  const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value,foto_url:document.getElementById('pr-foto').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
   const editando=productoEditandoId!==null;
   const url=editando?(API+'/productos/'+productoEditandoId):(API+'/productos');
@@ -969,6 +1026,10 @@ async function agregarProducto(){
     document.getElementById('pr-precio').value='';
     document.getElementById('pr-stock').value='';
     document.getElementById('pr-descripcion').value='';
+    document.getElementById('pr-foto').value='';
+    document.getElementById('pr-foto-file').value='';
+    document.getElementById('pr-foto-preview').style.display='none';
+    document.getElementById('pr-foto-status').textContent='';
   }
   loadProductos();
 }
