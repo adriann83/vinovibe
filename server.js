@@ -373,7 +373,7 @@ Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markd
 {"id": <id del vino elegido>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es la mejor opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": "<breve sugerencia de maridaje, 3-6 palabras>"}`;
 
     const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }]
     });
