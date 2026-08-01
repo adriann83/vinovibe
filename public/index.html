@@ -750,10 +750,13 @@ async function verFichaVino(id){
     const modal=document.getElementById('ficha-modal');
     modal.style.display='flex';
     document.getElementById('ficha-contenido').innerHTML=`
-      <div style="background:linear-gradient(135deg,var(--dark),#1C1428);padding:24px;border-radius:14px 14px 0 0;color:var(--cream);position:relative">
+      ${v.foto_url?`<div style="width:100%;height:220px;overflow:hidden;border-radius:14px 14px 0 0;position:relative">
+        <img src="${v.foto_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'">
+      </div>`:''}
+      <div style="background:linear-gradient(135deg,var(--dark),#1C1428);padding:24px;border-radius:${v.foto_url?'0':'14px 14px'} 0 0;color:var(--cream);position:relative">
         <button onclick="cerrarFicha()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.1);border:none;color:var(--cream);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
         <div style="display:flex;gap:16px;align-items:flex-start">
-          ${v.foto_url?`<img src="${v.foto_url}" style="width:48px;height:70px;object-fit:cover;border-radius:7px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0\\'></div>'">`:'<div style="width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0"></div></div>'}
+          ${v.foto_url?'':'<div style="width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0"></div></div>'}
           <div>
             <div style="display:inline-block;background:rgba(196,163,90,.2);color:var(--gold);font-size:10px;font-weight:600;padding:2px 8px;border-radius:50px;margin-bottom:6px">✦ ${match}% MATCH</div>
             <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:2px">${v.nombre}</div>
