@@ -769,6 +769,7 @@ async function verFichaProducto(id){
           <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:6px">Descripción</div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--ink);line-height:1.6">${p.descripcion||'Sin descripción.'}</div>
         </div>
+        ${p.ficha_pdf_url?`<a href="${p.ficha_pdf_url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--garnet);text-decoration:none;border:1px solid var(--border);padding:8px 14px;border-radius:8px;margin-bottom:14px">📄 Descargar ficha técnica (PDF)</a>`:''}
         <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
           <div style="font-size:22px;font-weight:600;color:var(--garnet)">$${Number(p.precio).toLocaleString('es-AR')}</div>
           <div style="font-size:12px;color:${p.stock<5?'#C0392B':'#256B25'}">${p.stock>0?'● '+p.stock+' disponibles':'✕ Sin stock'}</div>

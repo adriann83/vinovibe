@@ -209,6 +209,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
         <div id="pr-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
         <img id="pr-foto-preview" style="display:none;margin-top:8px;width:80px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
       </div>
+      <div class="form-group full">
+        <label>Ficha técnica en PDF (opcional)</label>
+        <input type="hidden" id="pr-pdf">
+        <input type="file" id="pr-pdf-file" accept="application/pdf" onchange="subirPDF('pr-pdf-file','pr-pdf','pr-pdf-status')">
+        <div id="pr-pdf-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
+      </div>
       <div class="form-group full"><label>Descripción</label><textarea id="pr-descripcion" placeholder="Ej: Botella 500ml, cosecha 2025..."></textarea></div>
     </div>
     <div class="btn-row">
@@ -886,6 +892,29 @@ async function loadVinos(){
 const CLOUDINARY_CLOUD_NAME='pslvlqpb';
 const CLOUDINARY_PRESET='vinovibe';
 
+async function subirPDF(fileInputId,hiddenInputId,statusId){
+  const fileInput=document.getElementById(fileInputId);
+  const file=fileInput.files[0];
+  if(!file)return;
+  const statusDiv=document.getElementById(statusId);
+  statusDiv.textContent='Subiendo PDF...';
+  statusDiv.style.color='var(--smoke)';
+  try{
+    const formData=new FormData();
+    formData.append('file',file);
+    formData.append('upload_preset',CLOUDINARY_PRESET);
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,{method:'POST',body:formData});
+    const data=await r.json();
+    if(!data.secure_url)throw new Error('No se pudo subir el PDF');
+    document.getElementById(hiddenInputId).value=data.secure_url;
+    statusDiv.textContent='✓ PDF listo';
+    statusDiv.style.color='#256B25';
+  }catch(e){
+    statusDiv.textContent='✕ Error al subir el PDF. Probá de nuevo.';
+    statusDiv.style.color='#C0392B';
+  }
+}
+
 async function subirFoto(fileInputId,hiddenInputId,previewId,statusId){
   const fileInput=document.getElementById(fileInputId);
   const file=fileInput.files[0];
@@ -993,6 +1022,9 @@ function editarProducto(id){
   const prPreview=document.getElementById('pr-foto-preview');
   if(p.foto_url){prPreview.src=p.foto_url;prPreview.style.display='block';}else{prPreview.style.display='none';}
   document.getElementById('pr-foto-status').textContent='';
+  document.getElementById('pr-pdf').value=p.ficha_pdf_url||'';
+  document.getElementById('pr-pdf-status').textContent=p.ficha_pdf_url?'✓ Ya tiene PDF cargado':'';
+  document.getElementById('pr-pdf-status').style.color=p.ficha_pdf_url?'#256B25':'var(--smoke)';
   document.getElementById('pr-form-titulo').textContent='Editar producto';
   document.getElementById('pr-btn-guardar').textContent='Guardar cambios';
   document.getElementById('pr-btn-cancelar').style.display='inline-block';
@@ -1005,13 +1037,16 @@ function cancelarEdicionProducto(){
   document.getElementById('pr-foto-file').value='';
   document.getElementById('pr-foto-preview').style.display='none';
   document.getElementById('pr-foto-status').textContent='';
+  document.getElementById('pr-pdf').value='';
+  document.getElementById('pr-pdf-file').value='';
+  document.getElementById('pr-pdf-status').textContent='';
   document.getElementById('pr-form-titulo').textContent='Agregar producto';
   document.getElementById('pr-btn-guardar').textContent='Agregar producto';
   document.getElementById('pr-btn-cancelar').style.display='none';
 }
 
 async function agregarProducto(){
-  const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value,foto_url:document.getElementById('pr-foto').value};
+  const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value,foto_url:document.getElementById('pr-foto').value,ficha_pdf_url:document.getElementById('pr-pdf').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
   const editando=productoEditandoId!==null;
   const url=editando?(API+'/productos/'+productoEditandoId):(API+'/productos');
@@ -1030,6 +1065,9 @@ async function agregarProducto(){
     document.getElementById('pr-foto-file').value='';
     document.getElementById('pr-foto-preview').style.display='none';
     document.getElementById('pr-foto-status').textContent='';
+    document.getElementById('pr-pdf').value='';
+    document.getElementById('pr-pdf-file').value='';
+    document.getElementById('pr-pdf-status').textContent='';
   }
   loadProductos();
 }
