@@ -170,6 +170,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
         <input type="file" id="v-foto-file" accept="image/*" onchange="subirFoto('v-foto-file','v-foto','v-foto-preview','v-foto-status')">
         <div id="v-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
         <img id="v-foto-preview" style="display:none;margin-top:8px;width:80px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        <button type="button" class="btn btn-sm" style="margin-top:8px;background:var(--cream);border:1px solid var(--border)" onclick="quitarFoto('v-foto','v-foto-file','v-foto-preview','v-foto-status')">✕ Quitar foto</button>
       </div>
       <div class="form-group full"><label>Descripción</label><textarea id="v-descripcion" placeholder="Notas de cata..."></textarea></div>
     </div>
@@ -208,12 +209,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
         <input type="file" id="pr-foto-file" accept="image/*" onchange="subirFoto('pr-foto-file','pr-foto','pr-foto-preview','pr-foto-status')">
         <div id="pr-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
         <img id="pr-foto-preview" style="display:none;margin-top:8px;width:80px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        <button type="button" class="btn btn-sm" style="margin-top:8px;background:var(--cream);border:1px solid var(--border)" onclick="quitarFoto('pr-foto','pr-foto-file','pr-foto-preview','pr-foto-status')">✕ Quitar foto</button>
       </div>
       <div class="form-group full">
         <label>Ficha técnica en PDF (opcional)</label>
         <input type="hidden" id="pr-pdf">
         <input type="file" id="pr-pdf-file" accept="application/pdf" onchange="subirPDF('pr-pdf-file','pr-pdf','pr-pdf-status')">
         <div id="pr-pdf-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
+        <button type="button" class="btn btn-sm" style="margin-top:8px;background:var(--cream);border:1px solid var(--border)" onclick="quitarPDF('pr-pdf','pr-pdf-file','pr-pdf-status')">✕ Quitar PDF</button>
       </div>
       <div class="form-group full"><label>Descripción</label><textarea id="pr-descripcion" placeholder="Ej: Botella 500ml, cosecha 2025..."></textarea></div>
     </div>
@@ -892,6 +895,19 @@ async function loadVinos(){
 const CLOUDINARY_CLOUD_NAME='pslvlqpb';
 const CLOUDINARY_PRESET='vinovibe';
 
+function quitarFoto(hiddenInputId,fileInputId,previewId,statusId){
+  document.getElementById(hiddenInputId).value='';
+  document.getElementById(fileInputId).value='';
+  document.getElementById(previewId).style.display='none';
+  document.getElementById(statusId).textContent='';
+}
+
+function quitarPDF(hiddenInputId,fileInputId,statusId){
+  document.getElementById(hiddenInputId).value='';
+  document.getElementById(fileInputId).value='';
+  document.getElementById(statusId).textContent='';
+}
+
 async function subirPDF(fileInputId,hiddenInputId,statusId){
   const fileInput=document.getElementById(fileInputId);
   const file=fileInput.files[0];
@@ -903,7 +919,7 @@ async function subirPDF(fileInputId,hiddenInputId,statusId){
     const formData=new FormData();
     formData.append('file',file);
     formData.append('upload_preset',CLOUDINARY_PRESET);
-    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,{method:'POST',body:formData});
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,{method:'POST',body:formData});
     const data=await r.json();
     if(!data.secure_url)throw new Error('No se pudo subir el PDF');
     document.getElementById(hiddenInputId).value=data.secure_url;
