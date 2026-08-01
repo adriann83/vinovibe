@@ -73,6 +73,14 @@ async function initDb() {
     );
   `);
 
+  // Migración: agregar columna foto_url si todavía no existe (para bases ya creadas antes)
+  for (const alter of [
+    'ALTER TABLE vinos ADD COLUMN foto_url TEXT',
+    'ALTER TABLE productos ADD COLUMN foto_url TEXT'
+  ]) {
+    try { await db.execute(alter); } catch (e) { /* ya existe, la ignoramos */ }
+  }
+
   // Crear el usuario admin inicial si no existe ninguno (usando ADMIN_USERNAME / ADMIN_PASSWORD del .env)
   const adminCount = await db.execute('SELECT COUNT(*) as c FROM admin_users');
   if (Number(adminCount.rows[0].c) === 0) {
@@ -155,11 +163,11 @@ app.get('/api/vinos/:id', async (req, res) => {
 });
 
 app.post('/api/vinos', requireAuth, async (req, res) => {
-  const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion } = req.body;
+  const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion, foto_url } = req.body;
   try {
     const result = await db.execute({
-      sql: `INSERT INTO vinos (nombre,bodega,region,varietal,anada,precio,stock,tanino,acidez,cuerpo,dulzor,descripcion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      args: [nombre, bodega, region, varietal, anada, precio, stock, tanino||5, acidez||5, cuerpo||5, dulzor||2, descripcion]
+      sql: `INSERT INTO vinos (nombre,bodega,region,varietal,anada,precio,stock,tanino,acidez,cuerpo,dulzor,descripcion,foto_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      args: [nombre, bodega, region, varietal, anada, precio, stock, tanino||5, acidez||5, cuerpo||5, dulzor||2, descripcion, foto_url || null]
     });
     res.json({ id: Number(result.lastInsertRowid) });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -173,11 +181,11 @@ app.delete('/api/vinos/:id', requireAuth, async (req, res) => {
 });
 
 app.put('/api/vinos/:id', requireAuth, async (req, res) => {
-  const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion } = req.body;
+  const { nombre, bodega, region, varietal, anada, precio, stock, tanino, acidez, cuerpo, dulzor, descripcion, foto_url } = req.body;
   try {
     await db.execute({
-      sql: `UPDATE vinos SET nombre=?,bodega=?,region=?,varietal=?,anada=?,precio=?,stock=?,tanino=?,acidez=?,cuerpo=?,dulzor=?,descripcion=? WHERE id=?`,
-      args: [nombre, bodega, region, varietal, anada, precio, stock, tanino||5, acidez||5, cuerpo||5, dulzor||2, descripcion, req.params.id]
+      sql: `UPDATE vinos SET nombre=?,bodega=?,region=?,varietal=?,anada=?,precio=?,stock=?,tanino=?,acidez=?,cuerpo=?,dulzor=?,descripcion=?,foto_url=? WHERE id=?`,
+      args: [nombre, bodega, region, varietal, anada, precio, stock, tanino||5, acidez||5, cuerpo||5, dulzor||2, descripcion, foto_url || null, req.params.id]
     });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -205,24 +213,24 @@ app.get('/api/productos', async (req, res) => {
 });
 
 app.post('/api/productos', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     const result = await db.execute({
-      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion) VALUES (?,?,?,?,?,?)`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null]
+      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion,foto_url) VALUES (?,?,?,?,?,?,?)`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null]
     });
     res.json({ id: Number(result.lastInsertRowid) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/productos/:id', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     await db.execute({
-      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=? WHERE id=?`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, req.params.id]
+      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=?,foto_url=? WHERE id=?`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, req.params.id]
     });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
