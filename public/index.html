@@ -591,7 +591,7 @@ async function loadRecomendaciones(){
     }).sort((a,b)=>b.match-a.match).slice(0,4);
     grid.innerHTML=scored.map(v=>`
       <div class="vino-card">
-        <div class="vino-bottle"></div>
+        ${v.foto_url?`<img src="${v.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\'></div>'">`:'<div class="vino-bottle"></div>'}
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
@@ -639,7 +639,7 @@ function renderCatalogo(vinos){
     const match=Math.max(Math.round(100-(diff/40)*100),40);
     const stockColor=v.stock<5?'#C0392B':v.stock<15?'#E8A020':'#256B25';
     return`<div class="vino-card">
-      <div class="vino-bottle"></div>
+      ${v.foto_url?`<img src="${v.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\'></div>'">`:'<div class="vino-bottle"></div>'}
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
@@ -697,7 +697,7 @@ function renderProductosCatalogo(productos){
   grid.innerHTML=productos.map(p=>{
     const stockColor=p.stock<5?'#C0392B':p.stock<15?'#E8A020':'#256B25';
     return`<div class="vino-card">
-      <div class="vino-bottle" style="background:linear-gradient(180deg,#4A6B2A,#2E4318)"></div>
+      ${p.foto_url?`<img src="${p.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\' style=\\'background:linear-gradient(180deg,#4A6B2A,#2E4318)\\'></div>'">`:'<div class="vino-bottle" style="background:linear-gradient(180deg,#4A6B2A,#2E4318)"></div>'}
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${p.nombre}</div>
@@ -753,7 +753,7 @@ async function verFichaVino(id){
       <div style="background:linear-gradient(135deg,var(--dark),#1C1428);padding:24px;border-radius:14px 14px 0 0;color:var(--cream);position:relative">
         <button onclick="cerrarFicha()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.1);border:none;color:var(--cream);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
         <div style="display:flex;gap:16px;align-items:flex-start">
-          <div style="width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0"></div></div>
+          ${v.foto_url?`<img src="${v.foto_url}" style="width:48px;height:70px;object-fit:cover;border-radius:7px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0\\'></div>'">`:'<div style="width:48px;height:70px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0"></div></div>'}
           <div>
             <div style="display:inline-block;background:rgba(196,163,90,.2);color:var(--gold);font-size:10px;font-weight:600;padding:2px 8px;border-radius:50px;margin-bottom:6px">✦ ${match}% MATCH</div>
             <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:2px">${v.nombre}</div>
