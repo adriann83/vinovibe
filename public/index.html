@@ -713,6 +713,7 @@ function renderProductosCatalogo(productos){
           <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(p.precio).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:${stockColor};font-weight:500">${p.stock>0?'● '+p.stock+' disponibles':'✕ Sin stock'}</div>
           <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaProducto(${p.id})">📋 Ficha</button>
             ${p.stock>0?`<input id="qty-prod-${p.id}" type="number" value="1" min="1" max="${p.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
             <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock})" ${p.stock===0?'disabled':''}>+ Pedir</button>
           </div>
@@ -746,6 +747,34 @@ function abrirZoomFoto(url){
 
 function cerrarZoomFoto(){
   document.getElementById('zoom-modal').style.display='none';
+}
+
+async function verFichaProducto(id){
+  try{
+    const p=await fetch(API+'/productos').then(r=>r.json()).then(list=>list.find(x=>x.id===id));
+    if(!p)return alert('No se encontró el producto');
+    const modal=document.getElementById('ficha-modal');
+    modal.style.display='flex';
+    document.getElementById('ficha-contenido').innerHTML=`
+      ${p.foto_url?`<div style="width:100%;height:min(55vh,480px);background:var(--white);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--border)">
+        <img src="${p.foto_url}" style="max-width:92%;max-height:96%;width:auto;height:auto;object-fit:contain;display:block;cursor:zoom-in" onerror="this.parentElement.style.display='none'" onclick="abrirZoomFoto('${p.foto_url}')">
+      </div>`:''}
+      <div style="background:linear-gradient(135deg,var(--dark),#1C1428);padding:24px;border-radius:${p.foto_url?'0 0 0 0':'14px 14px 0 0'};color:var(--cream);position:relative">
+        <button onclick="cerrarFicha()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.1);border:none;color:var(--cream);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:2px">${p.nombre}</div>
+        <div style="font-size:12px;color:rgba(245,242,238,.5)">${p.categoria}${p.marca?' · '+p.marca:''}</div>
+      </div>
+      <div style="padding:18px;overflow-y:auto;flex:1">
+        <div style="background:var(--cream);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:6px">Descripción</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--ink);line-height:1.6">${p.descripcion||'Sin descripción.'}</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <div style="font-size:22px;font-weight:600;color:var(--garnet)">$${Number(p.precio).toLocaleString('es-AR')}</div>
+          <div style="font-size:12px;color:${p.stock<5?'#C0392B':'#256B25'}">${p.stock>0?'● '+p.stock+' disponibles':'✕ Sin stock'}</div>
+        </div>
+      </div>`;
+  }catch(e){ alert('Error al cargar la ficha'); }
 }
 
 async function verFichaVino(id){
