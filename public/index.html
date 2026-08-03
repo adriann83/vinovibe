@@ -587,7 +587,11 @@ async function preguntarSommelierConsumidor(){
           <div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${top.vino_recomendado}</div>
           <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${top.bodega}</div>
           <div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${top.razon}</div>
-          <div style="font-size:12px;color:#C4A35A">🍽️ ${top.maridaje}</div>
+          <div style="font-size:12px;color:#C4A35A;margin-bottom:10px">🍽️ ${top.maridaje}</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="font-size:19px;font-weight:600;color:#fff">$${Number(top.precio||0).toLocaleString('es-AR')}</div>
+            <button class="btn btn-sm btn-gold" onclick="verFichaVino(${top.id})">📋 Ficha</button>
+          </div>
         </div>
       </div>`;
 
