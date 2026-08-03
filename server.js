@@ -427,6 +427,89 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
   }
 });
 
+// ── SOMMELIER DE PRODUCTOS (aceites, vinagres, aceitunas) ──────────────────
+
+app.post('/api/sommelier-productos', async (req, res) => {
+  const { contexto, productos } = req.body;
+  if (!productos || productos.length === 0) return res.status(400).json({ error: 'Sin productos' });
+
+  const fallback = () => {
+    const disponibles = productos.filter(p => (p.stock || 0) > 0);
+    const base = disponibles.length ? disponibles : productos;
+    const elegido = base[Math.floor(Math.random() * base.length)];
+    return {
+      producto_recomendado: elegido.nombre,
+      marca: elegido.marca,
+      match_porcentaje: 70,
+      razon: elegido.descripcion || 'Buena opción de nuestro catálogo.',
+      uso_sugerido: 'Ideal como aderezo o acompañamiento'
+    };
+  };
+
+  try {
+    const catalogoTexto = productos.map(p =>
+      `- id:${p.id} | ${p.nombre} (${p.marca || 'sin marca'}) | Categoría: ${p.categoria || '-'} | Stock:${p.stock} | Descripción: ${p.descripcion || 'sin notas'}`
+    ).join('\n');
+
+    const prompt = `Sos un sommelier experto en aceites de oliva, vinagres balsámicos y productos gourmet, ayudando a elegir el mejor producto de este catálogo específico para un cliente.
+
+CATÁLOGO DISPONIBLE:
+${catalogoTexto}
+
+${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá los productos más versátiles o destacados del catálogo.'}
+
+Elegí hasta 3 productos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado, considerando lo que el cliente pidió (plato, uso, tipo de sabor buscado, etc.) y las notas de cata/descripción de cada producto. Si el catálogo tiene menos de 3 productos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
+
+Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
+[{"id": <id del producto>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este producto es una buena opción, mencionando notas de sabor reales del producto>", "uso_sugerido": "<breve sugerencia de uso o maridaje, 3-6 palabras>"}]`;
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 700,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
+    const limpio = textoRespuesta.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(limpio);
+    const lista = Array.isArray(data) ? data : [data];
+
+    const recomendaciones = lista
+      .map(item => {
+        const p = productos.find(x => x.id === item.id);
+        if (!p) return null;
+        return {
+          id: p.id,
+          producto_recomendado: p.nombre,
+          marca: p.marca,
+          categoria: p.categoria,
+          precio: p.precio,
+          foto_url: p.foto_url || null,
+          match_porcentaje: item.match_porcentaje || 85,
+          razon: item.razon || '',
+          uso_sugerido: item.uso_sugerido || ''
+        };
+      })
+      .filter(Boolean);
+
+    if (!recomendaciones.length) throw new Error('La IA no eligió ningún producto válido del catálogo');
+
+    // Se mantienen estos campos sueltos por compatibilidad con pantallas que esperan un solo resultado
+    res.json({
+      recomendaciones,
+      producto_recomendado: recomendaciones[0].producto_recomendado,
+      marca: recomendaciones[0].marca,
+      match_porcentaje: recomendaciones[0].match_porcentaje,
+      razon: recomendaciones[0].razon,
+      uso_sugerido: recomendaciones[0].uso_sugerido
+    });
+  } catch (err) {
+    console.error('Error en sommelier de productos IA, usando respaldo:', err.message);
+    const f = fallback();
+    res.json({ recomendaciones: [{ ...f, foto_url: (productos.find(p => p.nombre === f.producto_recomendado) || {}).foto_url || null }], ...f });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
