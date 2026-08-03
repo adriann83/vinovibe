@@ -573,9 +573,46 @@ async function preguntarSommelierConsumidor(){
     const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
     const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,vinos})});
     const d=await r.json();
+    const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
+    const top=recs[0];
+    const resto=recs.slice(1);
+
     const div=document.getElementById('resultado-som-consumidor');
     div.style.display='block';
-    div.innerHTML=`<div style="display:inline-block;background:rgba(196,163,90,.2);color:#C4A35A;font-size:11px;font-weight:600;padding:4px 10px;border-radius:50px;margin-bottom:8px">✦ ${d.match_porcentaje}% match</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${d.vino_recomendado}</div><div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${d.bodega}</div><div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${d.razon}</div><div style="font-size:12px;color:#C4A35A">🍽️ ${d.maridaje}</div>`;
+    div.innerHTML=`
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        ${top.foto_url?`<img src="${top.foto_url}" style="width:56px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:56px;height:80px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:8px;flex-shrink:0\\'></div>'">`:`<div style="width:56px;height:80px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:8px;flex-shrink:0"></div>`}
+        <div style="flex:1">
+          <div style="display:inline-block;background:rgba(196,163,90,.2);color:#C4A35A;font-size:11px;font-weight:600;padding:4px 10px;border-radius:50px;margin-bottom:8px">✦ ${top.match_porcentaje}% match</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${top.vino_recomendado}</div>
+          <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${top.bodega}</div>
+          <div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${top.razon}</div>
+          <div style="font-size:12px;color:#C4A35A">🍽️ ${top.maridaje}</div>
+        </div>
+      </div>`;
+
+    // Reemplaza la lista de abajo por los vinos que realmente eligió la IA para esta pregunta (con foto), en vez de la lista genérica por perfil
+    const grid=document.getElementById('recomendaciones-grid');
+    if(resto.length){
+      grid.innerHTML=`<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--smoke);margin-bottom:10px">Otras opciones para tu consulta</div>`+resto.map(v=>`
+        <div class="vino-card">
+          ${v.foto_url?`<img src="${v.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\'></div>'">`:'<div class="vino-bottle"></div>'}
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.vino_recomendado}</div>
+              <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${v.match_porcentaje}%</div>
+            </div>
+            <div style="font-size:11px;color:var(--smoke);margin-bottom:6px">${v.bodega}</div>
+            <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:8px">${v.razon||''}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="font-size:18px;font-weight:600;color:var(--garnet)">$${Number(v.precio||0).toLocaleString('es-AR')}</div>
+              <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="verFichaVino(${v.id})">📋 Ficha</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }else{
+      grid.innerHTML='';
+    }
   }catch(e){
     alert('No pudimos consultar al sommelier. Probá de nuevo.');
   }finally{

@@ -376,33 +376,54 @@ PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez
 
 ${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá en base a su perfil de sabor.'}
 
-Elegí el vino MÁS ADECUADO de la lista de arriba (solo de esa lista, usando su id exacto) considerando tanto el perfil de sabor como lo que el cliente pidió. Si mencionó una comida o maridaje, priorizá eso por sobre el perfil numérico.
+Elegí hasta 3 vinos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado, considerando tanto el perfil de sabor como lo que el cliente pidió. Si mencionó una comida o maridaje, priorizá eso por sobre el perfil numérico. Si el catálogo tiene menos de 3 vinos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
-Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, con este formato exacto:
-{"id": <id del vino elegido>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es la mejor opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": "<breve sugerencia de maridaje, 3-6 palabras>"}`;
+Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
+[{"id": <id del vino>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es una buena opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": "<breve sugerencia de maridaje, 3-6 palabras>"}]`;
 
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 500,
+      max_tokens: 700,
       messages: [{ role: 'user', content: prompt }]
     });
 
-    const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '{}';
+    const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
     const limpio = textoRespuesta.replace(/```json|```/g, '').trim();
     const data = JSON.parse(limpio);
-    const elegido = vinos.find(v => v.id === data.id);
-    if (!elegido) throw new Error('El vino elegido por la IA no está en el catálogo');
+    const lista = Array.isArray(data) ? data : [data];
 
+    const recomendaciones = lista
+      .map(item => {
+        const v = vinos.find(x => x.id === item.id);
+        if (!v) return null;
+        return {
+          id: v.id,
+          vino_recomendado: v.nombre,
+          bodega: v.bodega,
+          precio: v.precio,
+          foto_url: v.foto_url || null,
+          match_porcentaje: item.match_porcentaje || 85,
+          razon: item.razon || '',
+          maridaje: item.maridaje || ''
+        };
+      })
+      .filter(Boolean);
+
+    if (!recomendaciones.length) throw new Error('La IA no eligió ningún vino válido del catálogo');
+
+    // Se mantienen estos campos sueltos por compatibilidad con pantallas que esperan un solo resultado
     res.json({
-      vino_recomendado: elegido.nombre,
-      bodega: elegido.bodega,
-      match_porcentaje: data.match_porcentaje || 85,
-      razon: data.razon || '',
-      maridaje: data.maridaje || ''
+      recomendaciones,
+      vino_recomendado: recomendaciones[0].vino_recomendado,
+      bodega: recomendaciones[0].bodega,
+      match_porcentaje: recomendaciones[0].match_porcentaje,
+      razon: recomendaciones[0].razon,
+      maridaje: recomendaciones[0].maridaje
     });
   } catch (err) {
     console.error('Error en sommelier IA, usando respaldo:', err.message);
-    res.json(fallback());
+    const f = fallback();
+    res.json({ recomendaciones: [{ ...f, foto_url: (vinos.find(v => v.nombre === f.vino_recomendado) || {}).foto_url || null }], ...f });
   }
 });
 
