@@ -1083,14 +1083,15 @@ async function confirmarMiPedido(){
 
 async function mostrarBotonWhatsapp(cliente,tipo,items,total,pedidoId){
   const div=document.getElementById('mp-items');
-  let msg=`¡Hola! Quiero confirmar mi pedido en VinoVibe 🍷%0A%0A`;
-  if(pedidoId)msg+=`*Pedido #${pedidoId}*%0A`;
-  msg+=`*Cliente:* ${cliente}%0A`;
-  msg+=`*Entrega:* ${tipo==='retiro'?'Retiro en vinoteca':'Envío a domicilio'}%0A%0A`;
-  msg+=`*Pedido:*%0A`;
-  items.forEach(i=>{msg+=`• ${i.nombre} x${i.cantidad} — $${(i.precio*i.cantidad).toLocaleString('es-AR')}%0A`;});
-  msg+=`%0A*Total: $${total.toLocaleString('es-AR')}*%0A%0A`;
+  let msg=`¡Hola! Quiero confirmar mi pedido en VinoVibe 🍷\n\n`;
+  if(pedidoId)msg+=`*Pedido N° ${pedidoId}*\n`;
+  msg+=`*Cliente:* ${cliente}\n`;
+  msg+=`*Entrega:* ${tipo==='retiro'?'Retiro en vinoteca':'Envío a domicilio'}\n\n`;
+  msg+=`*Pedido:*\n`;
+  items.forEach(i=>{msg+=`• ${i.nombre} x${i.cantidad} — $${(i.precio*i.cantidad).toLocaleString('es-AR')}\n`;});
+  msg+=`\n*Total: $${total.toLocaleString('es-AR')}*\n\n`;
   msg+=`Ya hice la transferencia, en este mensaje te mando el comprobante 📎`;
+  const msgCodificado=encodeURIComponent(msg);
 
   let whatsappHtml='';
   let datosPagoHtml='';
@@ -1098,7 +1099,7 @@ async function mostrarBotonWhatsapp(cliente,tipo,items,total,pedidoId){
     const cfg=await fetch(API+'/config').then(r=>r.json());
     if(cfg.whatsapp){
       const numero=cfg.whatsapp.replace(/\D/g,'');
-      whatsappHtml=`<a href="https://wa.me/${numero}?text=${msg}" target="_blank" style="display:inline-block;margin-top:14px;background:#25D366;color:#fff;padding:12px 22px;border-radius:50px;text-decoration:none;font-weight:600;font-size:14px">📲 Enviar comprobante por WhatsApp</a>`;
+      whatsappHtml=`<a href="https://wa.me/${numero}?text=${msgCodificado}" target="_blank" style="display:inline-block;margin-top:14px;background:#25D366;color:#fff;padding:12px 22px;border-radius:50px;text-decoration:none;font-weight:600;font-size:14px">📲 Enviar comprobante por WhatsApp</a>`;
     }
     if(cfg.alias_transferencia||cfg.cbu_transferencia){
       datosPagoHtml=`<div style="margin-top:14px;padding:12px;background:var(--cream);border-radius:8px;text-align:left;font-size:13px;color:var(--ink)">
