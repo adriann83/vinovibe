@@ -77,7 +77,8 @@ async function initDb() {
   for (const alter of [
     'ALTER TABLE vinos ADD COLUMN foto_url TEXT',
     'ALTER TABLE productos ADD COLUMN foto_url TEXT',
-    'ALTER TABLE productos ADD COLUMN ficha_pdf_url TEXT'
+    'ALTER TABLE productos ADD COLUMN ficha_pdf_url TEXT',
+    'ALTER TABLE pedidos ADD COLUMN metodo_pago TEXT'
   ]) {
     try { await db.execute(alter); } catch (e) { /* ya existe, la ignoramos */ }
   }
@@ -113,7 +114,12 @@ async function initDb() {
 // ── CONFIG PÚBLICA ───────────────────────────────────────────────────────
 
 app.get('/api/config', (req, res) => {
-  res.json({ whatsapp: process.env.VINOTECA_WHATSAPP || null });
+  res.json({
+    whatsapp: process.env.VINOTECA_WHATSAPP || null,
+    alias_transferencia: process.env.VINOTECA_ALIAS || null,
+    cbu_transferencia: process.env.VINOTECA_CBU || null,
+    titular_transferencia: process.env.VINOTECA_TITULAR || null
+  });
 });
 
 // ── AUTENTICACIÓN ────────────────────────────────────────────────────────
@@ -292,25 +298,36 @@ app.post('/api/pedidos', async (req, res) => {
   const { cliente_nombre, items, total, tipo } = req.body;
   try {
     const result = await db.execute({
-      sql: 'INSERT INTO pedidos (cliente_nombre,items,total,tipo) VALUES (?,?,?,?)',
-      args: [cliente_nombre, JSON.stringify(items), total, tipo||'retiro']
+      sql: 'INSERT INTO pedidos (cliente_nombre,items,total,tipo,estado,metodo_pago) VALUES (?,?,?,?,?,?)',
+      args: [cliente_nombre, JSON.stringify(items), total, tipo||'retiro', 'pendiente_pago', 'transferencia']
     });
     const pedidoId = Number(result.lastInsertRowid);
-    const arr = Array.isArray(items) ? items : JSON.parse(items);
-    for (const i of arr) {
-      if (i.producto_id) {
-        await db.execute({ sql: 'UPDATE productos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.producto_id] });
-      } else if (i.vino_id) {
-        await db.execute({ sql: 'UPDATE vinos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.vino_id] });
-      }
-    }
+    // El stock ya NO se descuenta acá. Se descuenta recién cuando el pedido pasa a "pagado"
+    // (ver PUT /api/pedidos/:id/estado), así no se reserva stock de pedidos que nunca se pagan.
     res.json({ id: pedidoId });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
+  const nuevoEstado = req.body.estado;
   try {
-    await db.execute({ sql: 'UPDATE pedidos SET estado=? WHERE id=?', args: [req.body.estado, req.params.id] });
+    const actual = await db.execute({ sql: 'SELECT estado, items FROM pedidos WHERE id=?', args: [req.params.id] });
+    const pedido = actual.rows[0];
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    // Descontar stock recién al confirmar el pago (evita reservar stock de pedidos nunca pagados)
+    if (nuevoEstado === 'pagado' && pedido.estado !== 'pagado') {
+      const items = JSON.parse(pedido.items || '[]');
+      for (const i of items) {
+        if (i.producto_id) {
+          await db.execute({ sql: 'UPDATE productos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.producto_id] });
+        } else if (i.vino_id) {
+          await db.execute({ sql: 'UPDATE vinos SET stock=stock-? WHERE id=?', args: [i.cantidad, i.vino_id] });
+        }
+      }
+    }
+
+    await db.execute({ sql: 'UPDATE pedidos SET estado=? WHERE id=?', args: [nuevoEstado, req.params.id] });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
