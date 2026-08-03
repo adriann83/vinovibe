@@ -37,6 +37,8 @@ tr:hover td{background:var(--cream)}
 .badge-nuevo{background:#FFF3DC;color:#E8A020}
 .badge-listo{background:#EBF5EB;color:#256B25}
 .badge-entregado{background:#F0F0F0;color:#888}
+.badge-pendiente_pago{background:#FDE8E8;color:#C0392B}
+.badge-pagado{background:#E8F5E9;color:#2E7D32}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
@@ -1097,7 +1099,17 @@ async function eliminarProducto(id){
 async function loadPedidos(){
   await loadVinos();
   const p=await fetch(API+'/pedidos').then(r=>r.json());
-  document.getElementById('tabla-pedidos').innerHTML=p.map(x=>`<tr><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong></td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option></select></td><td><button class="btn btn-sm" onclick='generarComprobante(${JSON.stringify(x).replace(/'/g,"&apos;")})'>📄 PDF</button></td></tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
+  document.getElementById('tabla-pedidos').innerHTML=p.map(x=>{
+    const pendiente=x.estado==='pendiente_pago';
+    const filaStyle=pendiente?'style="background:#FDF3F2"':'';
+    const botonPago=pendiente?`<button class="btn btn-sm" style="background:#2E7D32;color:#fff;margin-top:4px" onclick="marcarComoPagado(${x.id})">✓ Marcar pagado</button>`:'';
+    return `<tr ${filaStyle}><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong></td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado.replace('_',' ')}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='pendiente_pago'?'selected':''} value="pendiente_pago">Pendiente de pago</option><option ${x.estado==='pagado'?'selected':''} value="pagado">Pagado</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo (antiguo)</option></select>${botonPago}</td><td><button class="btn btn-sm" onclick='generarComprobante(${JSON.stringify(x).replace(/'/g,"&apos;")})'>📄 PDF</button></td></tr>`;
+  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
+}
+
+async function marcarComoPagado(id){
+  if(!confirm('¿Confirmás que este pedido ya fue pagado? Esto va a descontar el stock correspondiente.'))return;
+  await cambiarEstado(id,'pagado');
 }
 
 function generarComprobante(pedido){
@@ -1191,6 +1203,7 @@ async function crearPedido(){
 
 async function cambiarEstado(id,estado){
   await fetch(API+'/pedidos/'+id+'/estado',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado})});
+  loadPedidos();
 }
 
 async function loadClientes(){
