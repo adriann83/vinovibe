@@ -366,6 +366,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="page-productos-catalogo" class="page">
   <div class="page-title">Aceites, Aceitunas y Más</div>
   <div class="page-sub">Otros productos disponibles en la vinoteca</div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">✦ Preguntale al Sommelier</div>
+    <div style="font-size:12px;color:var(--smoke);margin-bottom:12px">Contanos qué vas a comer, o qué buscás, y te recomendamos el aceite o vinagre ideal de nuestro catálogo.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="som-prod-pregunta" placeholder="Ej: voy a comer ensaladas con bife de chorizo" style="flex:1;min-width:220px">
+      <button class="btn btn-primary" id="btn-som-productos" onclick="preguntarSommelierProductos()">Preguntar</button>
+    </div>
+    <div id="loading-som-productos" style="display:none;text-align:center;padding:14px;color:var(--smoke);font-size:13px">Pensando la mejor recomendación...</div>
+    <div id="resultado-som-productos" style="display:none;margin-top:16px;padding:16px;background:var(--dark);border-radius:10px;color:#fff"></div>
+  </div>
+
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <input id="prod-buscar" placeholder="🔍 Buscar producto o marca..." style="flex:1;min-width:200px" oninput="filtrarProductosCatalogo()">
     <select id="prod-categoria" onchange="filtrarProductosCatalogo()">
@@ -621,6 +633,70 @@ async function preguntarSommelierConsumidor(){
     alert('No pudimos consultar al sommelier. Probá de nuevo.');
   }finally{
     document.getElementById('loading-som-consumidor').style.display='none';
+    btn.disabled=false;btn.textContent='Preguntar';
+  }
+}
+
+// ── SOMMELIER DE PRODUCTOS (aceites, vinagres, aceitunas) ──
+async function preguntarSommelierProductos(){
+  const pregunta=document.getElementById('som-prod-pregunta').value.trim();
+  if(!pregunta)return alert('Contanos qué buscás o qué vas a comer');
+  const btn=document.getElementById('btn-som-productos');
+  btn.disabled=true;btn.textContent='Consultando...';
+  document.getElementById('loading-som-productos').style.display='block';
+  document.getElementById('resultado-som-productos').style.display='none';
+  try{
+    const productos=await fetch(API+'/productos').then(r=>r.json());
+    if(!productos.length){alert('Todavía no hay productos cargados en el catálogo');return;}
+    const r=await fetch(API+'/sommelier-productos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contexto:pregunta,productos})});
+    const d=await r.json();
+    const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
+    const top=recs[0];
+    const resto=recs.slice(1);
+
+    const div=document.getElementById('resultado-som-productos');
+    div.style.display='block';
+    div.innerHTML=`
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        ${top.foto_url?`<img src="${top.foto_url}" style="width:56px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:56px;height:80px;background:linear-gradient(180deg,#4A6B2A,#2E4318);border-radius:8px;flex-shrink:0\\'></div>'">`:`<div style="width:56px;height:80px;background:linear-gradient(180deg,#4A6B2A,#2E4318);border-radius:8px;flex-shrink:0"></div>`}
+        <div style="flex:1">
+          <div style="display:inline-block;background:rgba(196,163,90,.2);color:#C4A35A;font-size:11px;font-weight:600;padding:4px 10px;border-radius:50px;margin-bottom:8px">✦ ${top.match_porcentaje}% match</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${top.producto_recomendado}</div>
+          <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${top.marca||''}</div>
+          <div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${top.razon}</div>
+          <div style="font-size:12px;color:#C4A35A;margin-bottom:10px">🍽️ ${top.uso_sugerido}</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="font-size:19px;font-weight:600;color:#fff">$${Number(top.precio||0).toLocaleString('es-AR')}</div>
+            <button class="btn btn-sm btn-gold" onclick="verFichaProducto(${top.id})">📋 Ficha</button>
+          </div>
+        </div>
+      </div>`;
+
+    // Muestra las otras opciones que eligió la IA para esta consulta, debajo del catálogo completo
+    const grid=document.getElementById('productos-catalogo-grid');
+    if(resto.length){
+      grid.innerHTML=`<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--smoke);margin-bottom:10px">Otras opciones para tu consulta</div>`+resto.map(p=>`
+        <div class="vino-card">
+          ${p.foto_url?`<img src="${p.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\' style=\\'background:linear-gradient(180deg,#4A6B2A,#2E4318)\\'></div>'">`:'<div class="vino-bottle" style="background:linear-gradient(180deg,#4A6B2A,#2E4318)"></div>'}
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${p.producto_recomendado}</div>
+              <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${p.match_porcentaje}%</div>
+            </div>
+            <div style="font-size:11px;color:var(--smoke);margin-bottom:6px">${p.marca||''}</div>
+            <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:8px">${p.razon||''}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="font-size:18px;font-weight:600;color:var(--garnet)">$${Number(p.precio||0).toLocaleString('es-AR')}</div>
+              <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="verFichaProducto(${p.id})">📋 Ficha</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+    // Nota: al volver a filtrar o recargar la pestaña, filtrarProductosCatalogo() vuelve a pintar el catálogo completo normalmente.
+  }catch(e){
+    alert('No pudimos consultar al sommelier. Probá de nuevo.');
+  }finally{
+    document.getElementById('loading-som-productos').style.display='none';
     btn.disabled=false;btn.textContent='Preguntar';
   }
 }
