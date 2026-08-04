@@ -71,6 +71,11 @@ async function initDb() {
       password_hash TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS sommelier_uso (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT,
+      fecha DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Migración: agregar columna foto_url si todavía no existe (para bases ya creadas antes)
@@ -112,6 +117,13 @@ async function initDb() {
 }
 
 // ── CONFIG PÚBLICA ───────────────────────────────────────────────────────
+
+// Registra cada consulta al Sommelier IA (para medir uso mensual por vinoteca)
+async function registrarUsoSommelier(tipo) {
+  try {
+    await db.execute({ sql: 'INSERT INTO sommelier_uso (tipo) VALUES (?)', args: [tipo] });
+  } catch (e) { console.error('No se pudo registrar uso del sommelier:', e.message); }
+}
 
 app.get('/api/config', (req, res) => {
   res.json({
@@ -294,6 +306,18 @@ app.get('/api/pedidos', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/sommelier-uso', requireAuth, async (req, res) => {
+  try {
+    const porTipo = await db.execute(
+      `SELECT tipo, COUNT(*) as cantidad FROM sommelier_uso WHERE fecha >= date('now','start of month') GROUP BY tipo`
+    );
+    const totalRes = await db.execute(
+      `SELECT COUNT(*) as total FROM sommelier_uso WHERE fecha >= date('now','start of month')`
+    );
+    res.json({ porTipo: porTipo.rows, total: Number(totalRes.rows[0]?.total || 0) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/pedidos', async (req, res) => {
   const { cliente_nombre, items, total, tipo } = req.body;
   try {
@@ -363,6 +387,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 app.post('/api/sommelier/pregunta-vino', async (req, res) => {
   const { vino, pregunta } = req.body;
   if (!vino || !pregunta) return res.status(400).json({ error: 'Faltan datos' });
+  registrarUsoSommelier('pregunta_vino');
   try {
     const prompt = `Sos un sommelier experto. Un cliente ya eligió este vino de nuestro catálogo:
 
@@ -390,6 +415,7 @@ Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta p
 app.post('/api/sommelier', async (req, res) => {
   const { perfil, contexto, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });
+  registrarUsoSommelier('vino');
   const p = perfil || { tanino: 5, acidez: 5, cuerpo: 5, dulzor: 5 };
 
   const fallback = () => {
@@ -479,6 +505,7 @@ El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y brev
 app.post('/api/sommelier-productos', async (req, res) => {
   const { contexto, productos } = req.body;
   if (!productos || productos.length === 0) return res.status(400).json({ error: 'Sin productos' });
+  registrarUsoSommelier('producto');
 
   const fallback = () => {
     const disponibles = productos.filter(p => (p.stock || 0) > 0);
