@@ -593,8 +593,8 @@ async function preguntarSommelierConsumidor(){
     const vinos=await fetch(API+'/vinos').then(r=>r.json());
     if(!vinos.length){alert('Todavía no hay vinos cargados en el catálogo');return;}
     const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
-    const preferenciasMaridaje=perfilGuardado?.maridaje?.length?` (suele acompañar con: ${perfilGuardado.maridaje.join(', ')})`:'';
-    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta+preferenciasMaridaje,vinos})});
+    const preferenciasGenerales=perfilGuardado?.maridaje?.length?perfilGuardado.maridaje.join(', '):'';
+    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,preferenciasGenerales,vinos})});
     const d=await r.json();
     const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
     const top=recs[0];

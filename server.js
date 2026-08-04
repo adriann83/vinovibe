@@ -413,7 +413,7 @@ Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta p
 });
 
 app.post('/api/sommelier', async (req, res) => {
-  const { perfil, contexto, vinos } = req.body;
+  const { perfil, contexto, preferenciasGenerales, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });
   registrarUsoSommelier('vino');
   const p = perfil || { tanino: 5, acidez: 5, cuerpo: 5, dulzor: 5 };
@@ -445,9 +445,11 @@ ${catalogoTexto}
 
 PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
 
-${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá en base a su perfil de sabor.'}
+${preferenciasGenerales ? `PREFERENCIA GENERAL DEL CLIENTE (lo que suele tomar habitualmente, NO es el pedido de hoy): ${preferenciasGenerales}` : ''}
 
-Elegí hasta 3 vinos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado, considerando tanto el perfil de sabor como lo que el cliente pidió. Si mencionó una comida o maridaje, priorizá eso por sobre el perfil numérico. Si el catálogo tiene menos de 3 vinos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
+${contexto ? `LO QUE PIDE EL CLIENTE HOY, EN ESTE MOMENTO: "${contexto}"` : 'El cliente no dio un pedido específico para hoy, recomendá en base a su perfil de sabor y preferencia general.'}
+
+Elegí hasta 3 vinos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado. IMPORTANTE: si "lo que pide el cliente hoy" menciona una comida o un maridaje concreto, ese pedido puntual tiene PRIORIDAD ABSOLUTA por sobre el perfil numérico y por sobre la preferencia general — la preferencia general solo sirve de referencia cuando el cliente no especificó nada puntual hoy. Por ejemplo, si el cliente suele tomar tintos pero hoy pide algo para acompañar un pescado, recomendá lo que mejor acompañe el pescado, no un tinto por costumbre. Si el catálogo tiene menos de 3 vinos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
 Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
 [{"id": <id del vino>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es una buena opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": ["<sugerencia 1, 2-4 palabras>", "<sugerencia 2, 2-4 palabras>", "<sugerencia 3, 2-4 palabras>"]}]
