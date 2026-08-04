@@ -137,6 +137,12 @@ async function registrarUsoSommelier(tipo) {
   } catch (e) { console.error('No se pudo registrar uso del sommelier:', e.message); }
 }
 
+// Limpia asteriscos/guiones bajos de Markdown que la IA a veces agrega, aunque le pidamos texto plano
+function limpiarMarkdown(texto) {
+  if (!texto) return texto;
+  return texto.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1');
+}
+
 app.get('/api/config', (req, res) => {
   res.json({
     whatsapp: process.env.VINOTECA_WHATSAPP || null,
@@ -410,14 +416,15 @@ Perfil de sabor: Tanino ${vino.tanino ?? '-'}, Acidez ${vino.acidez ?? '-'}, Cue
 
 El cliente pregunta específicamente sobre este vino: "${pregunta}"
 
-Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta por maridaje o con qué comida acompañarlo, sugerí 2-3 platos concretos. No hables de otros vinos del catálogo, solo de este.`;
+Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta por maridaje o con qué comida acompañarlo, sugerí 2-3 platos concretos. No hables de otros vinos del catálogo, solo de este. Respondé en texto plano, SIN usar formato Markdown (nada de asteriscos, guiones bajos ni símbolos de negrita/cursiva).`;
 
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 300,
       messages: [{ role: 'user', content: prompt }]
     });
-    const respuesta = msg.content.find(b => b.type === 'text')?.text || 'No pude generar una respuesta, probá de nuevo.';
+    let respuesta = msg.content.find(b => b.type === 'text')?.text || 'No pude generar una respuesta, probá de nuevo.';
+    respuesta = limpiarMarkdown(respuesta);
     res.json({ respuesta });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -490,7 +497,7 @@ El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y brev
           precio: v.precio,
           foto_url: v.foto_url || null,
           match_porcentaje: item.match_porcentaje || 85,
-          razon: item.razon || '',
+          razon: limpiarMarkdown(item.razon) || '',
           maridaje: Array.isArray(item.maridaje) ? item.maridaje : (item.maridaje ? [item.maridaje] : [])
         };
       })
@@ -574,7 +581,7 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
           precio: p.precio,
           foto_url: p.foto_url || null,
           match_porcentaje: item.match_porcentaje || 85,
-          razon: item.razon || '',
+          razon: limpiarMarkdown(item.razon) || '',
           uso_sugerido: item.uso_sugerido || ''
         };
       })
