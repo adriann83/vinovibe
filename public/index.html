@@ -266,6 +266,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="taste-item"><div class="taste-lbl">Cuerpo</div><div class="taste-track"><div class="taste-fill" id="pf-cuerpo" style="width:50%"></div></div></div>
       <div class="taste-item"><div class="taste-lbl">Dulzor</div><div class="taste-track"><div class="taste-fill" id="pf-dulzor" style="width:20%"></div></div></div>
     </div>
+    <div id="pf-maridaje-resumen" style="margin-top:12px"></div>
   </div>
   <div class="onboarding" id="onboarding-form">
     <div class="ob-title">✦ Armá tu perfil</div>
@@ -309,14 +310,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       </div>
     </div>
     <div class="ob-pregunta">
-      <div class="ob-label">¿Con qué maridás más seguido?</div>
-      <div class="ob-opciones">
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🥩 Carnes rojas</button>
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🐟 Pescados</button>
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🍝 Pastas</button>
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🧀 Quesos</button>
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">🥗 Vegetariano</button>
-        <button class="ob-opcion" onclick="selOp(this,'maridaje')">Solo tomo 🍷</button>
+      <div class="ob-label">¿Con qué maridás más seguido? <span style="font-weight:400;color:rgba(245,242,238,.4)">(elegí una o varias)</span></div>
+      <div class="ob-opciones" id="ob-maridaje">
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">🥩 Carnes rojas</button>
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">🐟 Pescados</button>
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">🍝 Pastas</button>
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">🧀 Quesos</button>
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">🥗 Vegetariano</button>
+        <button type="button" class="ob-opcion" onclick="selOpMulti(this)">Solo tomo 🍷</button>
       </div>
     </div>
     <div class="btn-row"><button class="btn btn-gold" onclick="guardarPerfil()">✦ Guardar mi perfil</button></div>
@@ -552,10 +553,15 @@ function selOp(btn,grupo){
   btn.classList.add('sel');
 }
 
+function selOpMulti(btn){
+  btn.classList.toggle('sel');
+}
+
 function guardarPerfil(){
   const nombre=document.getElementById('ob-nombre').value.trim();
   if(!nombre)return alert('Ingresá tu nombre');
-  const perfil={nombre,tanino:perfilLocal.tanino,acidez:perfilLocal.acidez,cuerpo:perfilLocal.cuerpo,dulzor:perfilLocal.dulzor};
+  const maridaje=Array.from(document.querySelectorAll('#ob-maridaje .ob-opcion.sel')).map(b=>b.textContent.trim());
+  const perfil={nombre,tanino:perfilLocal.tanino,acidez:perfilLocal.acidez,cuerpo:perfilLocal.cuerpo,dulzor:perfilLocal.dulzor,maridaje};
   localStorage.setItem('vinovibe_perfil',JSON.stringify(perfil));
   perfilGuardado=perfil;
   loadPerfil();
@@ -573,6 +579,15 @@ function loadPerfil(){
     document.getElementById('pf-cuerpo').style.width=(perfilGuardado.cuerpo*10)+'%';
     document.getElementById('pf-dulzor').style.width=(perfilGuardado.dulzor*10)+'%';
     document.getElementById('ob-nombre').value=perfilGuardado.nombre;
+    const maridajeResumen=document.getElementById('pf-maridaje-resumen');
+    if(perfilGuardado.maridaje?.length){
+      maridajeResumen.innerHTML=perfilGuardado.maridaje.map(m=>`<span style="display:inline-block;background:rgba(196,163,90,.18);color:var(--gold);font-size:11px;padding:3px 10px;border-radius:50px;margin:0 6px 6px 0">${m}</span>`).join('');
+    }else{
+      maridajeResumen.innerHTML='';
+    }
+    document.querySelectorAll('#ob-maridaje .ob-opcion').forEach(b=>{
+      b.classList.toggle('sel',(perfilGuardado.maridaje||[]).includes(b.textContent.trim()));
+    });
   }
 }
 
@@ -588,7 +603,8 @@ async function preguntarSommelierConsumidor(){
     const vinos=await fetch(API+'/vinos').then(r=>r.json());
     if(!vinos.length){alert('Todavía no hay vinos cargados en el catálogo');return;}
     const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
-    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,vinos})});
+    const preferenciasMaridaje=perfilGuardado?.maridaje?.length?` (suele acompañar con: ${perfilGuardado.maridaje.join(', ')})`:'';
+    const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta+preferenciasMaridaje,vinos})});
     const d=await r.json();
     const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
     const top=recs[0];
@@ -604,7 +620,7 @@ async function preguntarSommelierConsumidor(){
           <div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${top.vino_recomendado}</div>
           <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${top.bodega}</div>
           <div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${top.razon}</div>
-          <div style="font-size:12px;color:#C4A35A;margin-bottom:10px">🍽️ ${top.maridaje}</div>
+          <div style="margin-bottom:10px">${(Array.isArray(top.maridaje)?top.maridaje:[top.maridaje]).filter(Boolean).map(m=>`<span style="display:inline-block;background:rgba(196,163,90,.18);color:#C4A35A;font-size:11px;padding:3px 10px;border-radius:50px;margin:0 6px 4px 0">🍽️ ${m}</span>`).join('')}</div>
           <div style="display:flex;gap:10px;align-items:center">
             <div style="font-size:19px;font-weight:600;color:#fff">$${Number(top.precio||0).toLocaleString('es-AR')}</div>
             <button class="btn btn-sm btn-gold" onclick="verFichaVino(${top.id})">📋 Ficha</button>
@@ -1312,7 +1328,8 @@ async function consultarSommelier(){
     const d=await r.json();
     const div=document.getElementById('resultado-sommelier');
     div.style.display='block';
-    div.innerHTML=`<div class="match-badge">✦ ${d.match_porcentaje}% match</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${d.vino_recomendado}</div><div style="font-size:11px;color:rgba(245,242,238,.4);margin-bottom:10px">${d.bodega}</div><div style="font-size:13px;color:rgba(245,242,238,.65);line-height:1.6;margin-bottom:8px">${d.razon}</div><div style="font-size:12px;color:var(--gold)">🍽️ ${d.maridaje}</div>`;
+    const maridajeHtml=(Array.isArray(d.maridaje)?d.maridaje:[d.maridaje]).filter(Boolean).map(m=>`<span style="display:inline-block;background:rgba(196,163,90,.18);color:var(--gold);font-size:11px;padding:3px 10px;border-radius:50px;margin:0 6px 4px 0">🍽️ ${m}</span>`).join('');
+    div.innerHTML=`<div class="match-badge">✦ ${d.match_porcentaje}% match</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${d.vino_recomendado}</div><div style="font-size:11px;color:rgba(245,242,238,.4);margin-bottom:10px">${d.bodega}</div><div style="font-size:13px;color:rgba(245,242,238,.65);line-height:1.6;margin-bottom:8px">${d.razon}</div><div>${maridajeHtml}</div>`;
   }catch(e){alert('Error: '+e.message);}
   finally{document.getElementById('loading-sommelier').style.display='none';btn.disabled=false;btn.textContent='✦ Pedir recomendación';}
 }

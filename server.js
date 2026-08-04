@@ -375,7 +375,7 @@ app.post('/api/sommelier', async (req, res) => {
       bodega: mejor.bodega,
       match_porcentaje: mejor.match,
       razon: mejor.descripcion || 'Buena opción de nuestro catálogo para tu perfil.',
-      maridaje: 'Carnes rojas y quesos maduros'
+      maridaje: ['Carnes rojas', 'Quesos maduros']
     };
   };
 
@@ -396,7 +396,9 @@ ${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un con
 Elegí hasta 3 vinos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado, considerando tanto el perfil de sabor como lo que el cliente pidió. Si mencionó una comida o maridaje, priorizá eso por sobre el perfil numérico. Si el catálogo tiene menos de 3 vinos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
 Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
-[{"id": <id del vino>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es una buena opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": "<breve sugerencia de maridaje, 3-6 palabras>"}]`;
+[{"id": <id del vino>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este vino es una buena opción, mencionando notas de cata reales del vino y el maridaje si corresponde>", "maridaje": ["<sugerencia 1, 2-4 palabras>", "<sugerencia 2, 2-4 palabras>", "<sugerencia 3, 2-4 palabras>"]}]
+
+El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y breves (por ejemplo ["Asado", "Quesos duros", "Picadas"]), no una sola frase larga.`;
 
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -421,7 +423,7 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
           foto_url: v.foto_url || null,
           match_porcentaje: item.match_porcentaje || 85,
           razon: item.razon || '',
-          maridaje: item.maridaje || ''
+          maridaje: Array.isArray(item.maridaje) ? item.maridaje : (item.maridaje ? [item.maridaje] : [])
         };
       })
       .filter(Boolean);
