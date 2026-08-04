@@ -359,6 +359,34 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
 // ── SOMMELIER ──────────────────────────────────────────────────────────────
 
+// ── PREGUNTA DE SEGUIMIENTO SOBRE UN VINO YA RECOMENDADO ──
+app.post('/api/sommelier/pregunta-vino', async (req, res) => {
+  const { vino, pregunta } = req.body;
+  if (!vino || !pregunta) return res.status(400).json({ error: 'Faltan datos' });
+  try {
+    const prompt = `Sos un sommelier experto. Un cliente ya eligió este vino de nuestro catálogo:
+
+Vino: ${vino.nombre || vino.vino_recomendado} (${vino.bodega})
+Varietal: ${vino.varietal || '-'}
+Notas: ${vino.descripcion || vino.razon || 'sin notas adicionales'}
+Perfil de sabor: Tanino ${vino.tanino ?? '-'}, Acidez ${vino.acidez ?? '-'}, Cuerpo ${vino.cuerpo ?? '-'}, Dulzor ${vino.dulzor ?? '-'}
+
+El cliente pregunta específicamente sobre este vino: "${pregunta}"
+
+Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta por maridaje o con qué comida acompañarlo, sugerí 2-3 platos concretos. No hables de otros vinos del catálogo, solo de este.`;
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    const respuesta = msg.content.find(b => b.type === 'text')?.text || 'No pude generar una respuesta, probá de nuevo.';
+    res.json({ respuesta });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/sommelier', async (req, res) => {
   const { perfil, contexto, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });

@@ -486,6 +486,7 @@ let itemsPedido=[];
 let itemsMiPedido=[];
 let starSelected=0;
 let perfilLocal={tanino:5,acidez:5,cuerpo:5,dulzor:2};
+let ultimoVinoSommelier=null;
 let catasLocal=JSON.parse(localStorage.getItem('vinovibe_catas')||'[]');
 let perfilGuardado=JSON.parse(localStorage.getItem('vinovibe_perfil')||'null');
 let todosLosVinos=[];
@@ -626,7 +627,18 @@ async function preguntarSommelierConsumidor(){
             <button class="btn btn-sm btn-gold" onclick="verFichaVino(${top.id})">📋 Ficha</button>
           </div>
         </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,.12);margin-top:16px;padding-top:14px">
+        <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:8px">¿Alguna otra pregunta sobre este vino? (ej: ¿con qué plato lo acompaño?)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="som-followup-pregunta" placeholder="Escribí tu pregunta..." style="flex:1;min-width:180px">
+          <button class="btn btn-sm" style="background:rgba(196,163,90,.2);color:#C4A35A;border:1px solid rgba(196,163,90,.3)" onclick="preguntarSobreVinoRecomendado()" id="btn-som-followup">Preguntar</button>
+        </div>
+        <div id="som-followup-respuesta" style="margin-top:10px;font-size:13px;color:rgba(245,242,238,.8);line-height:1.6"></div>
       </div>`;
+
+    // Guarda el vino completo (con notas reales) para poder responder preguntas de seguimiento sin re-analizar todo el catálogo
+    ultimoVinoSommelier=vinos.find(v=>v.id===top.id)||top;
 
     // Reemplaza la lista de abajo por los vinos que realmente eligió la IA para esta pregunta (con foto), en vez de la lista genérica por perfil
     const grid=document.getElementById('recomendaciones-grid');
@@ -659,6 +671,27 @@ async function preguntarSommelierConsumidor(){
 }
 
 // ── SOMMELIER DE PRODUCTOS (aceites, vinagres, aceitunas) ──
+async function preguntarSobreVinoRecomendado(){
+  const input=document.getElementById('som-followup-pregunta');
+  const pregunta=input.value.trim();
+  if(!pregunta)return alert('Escribí tu pregunta sobre este vino');
+  if(!ultimoVinoSommelier)return;
+  const btn=document.getElementById('btn-som-followup');
+  const div=document.getElementById('som-followup-respuesta');
+  btn.disabled=true;btn.textContent='...';
+  div.innerHTML='<span style="color:rgba(245,242,238,.4)">Pensando...</span>';
+  try{
+    const r=await fetch(API+'/sommelier/pregunta-vino',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vino:ultimoVinoSommelier,pregunta})});
+    const d=await r.json();
+    div.textContent=d.respuesta||'No pude responder eso, probá de nuevo.';
+    input.value='';
+  }catch(e){
+    div.innerHTML='<span style="color:#E07070">No pudimos responder. Probá de nuevo.</span>';
+  }finally{
+    btn.disabled=false;btn.textContent='Preguntar';
+  }
+}
+
 async function preguntarSommelierProductos(){
   const pregunta=document.getElementById('som-prod-pregunta').value.trim();
   if(!pregunta)return alert('Contanos qué buscás o qué vas a comer');
