@@ -368,17 +368,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="page-title">Aceites, Aceitunas y Más</div>
   <div class="page-sub">Otros productos disponibles en la vinoteca</div>
 
-  <div class="card" style="margin-bottom:20px">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">✦ Preguntale al Sommelier</div>
-    <div style="font-size:12px;color:var(--smoke);margin-bottom:12px">Contanos qué vas a comer, o qué buscás, y te recomendamos el aceite o vinagre ideal de nuestro catálogo.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <input id="som-prod-pregunta" placeholder="Ej: voy a comer ensaladas con bife de chorizo" style="flex:1;min-width:220px">
-      <button class="btn btn-primary" id="btn-som-productos" onclick="preguntarSommelierProductos()">Preguntar</button>
-    </div>
-    <div id="loading-som-productos" style="display:none;text-align:center;padding:14px;color:var(--smoke);font-size:13px">Pensando la mejor recomendación...</div>
-    <div id="resultado-som-productos" style="display:none;margin-top:16px;padding:16px;background:var(--dark);border-radius:10px;color:#fff"></div>
-  </div>
-
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <input id="prod-buscar" placeholder="🔍 Buscar producto o marca..." style="flex:1;min-width:200px" oninput="filtrarProductosCatalogo()">
     <select id="prod-categoria" onchange="filtrarProductosCatalogo()">
