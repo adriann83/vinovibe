@@ -596,6 +596,7 @@ async function preguntarSommelierConsumidor(){
     const preferenciasGenerales=perfilGuardado?.maridaje?.length?perfilGuardado.maridaje.join(', '):'';
     const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,preferenciasGenerales,vinos})});
     const d=await r.json();
+    if(!r.ok){alert(d.error||'No pudimos consultar al sommelier, probá de nuevo en unos minutos.');return;}
     const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
     const top=recs[0];
     const resto=recs.slice(1);
@@ -672,7 +673,7 @@ async function preguntarSobreVinoRecomendado(){
   try{
     const r=await fetch(API+'/sommelier/pregunta-vino',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vino:ultimoVinoSommelier,pregunta})});
     const d=await r.json();
-    div.textContent=d.respuesta||'No pude responder eso, probá de nuevo.';
+    div.textContent=d.respuesta||d.error||'No pude responder eso, probá de nuevo.';
     input.value='';
   }catch(e){
     div.innerHTML='<span style="color:#E07070">No pudimos responder. Probá de nuevo.</span>';

@@ -6,6 +6,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@libsql/client');
 const Anthropic = require('@anthropic-ai/sdk');
+const rateLimit = require('express-rate-limit');
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const app = express();
@@ -18,6 +19,17 @@ const db = createClient({
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.set('trust proxy', 1);
+
+// Límite anti-abuso: máximo 15 consultas al Sommelier cada 10 minutos por visitante (por IP).
+// Esto no afecta a un cliente normal (nadie hace 15 preguntas seguidas en 10 minutos),
+// pero frena a alguien que entra a jugar/spamear el Sommelier sin intención de comprar.
+const limiteSommelier = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Hiciste muchas consultas seguidas. Esperá unos minutos y volvé a intentar.' }
+});
 app.use(session({
   secret: process.env.SESSION_SECRET || 'vinovibe-cambiar-este-secreto',
   resave: false,
@@ -384,7 +396,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 // ── SOMMELIER ──────────────────────────────────────────────────────────────
 
 // ── PREGUNTA DE SEGUIMIENTO SOBRE UN VINO YA RECOMENDADO ──
-app.post('/api/sommelier/pregunta-vino', async (req, res) => {
+app.post('/api/sommelier/pregunta-vino', limiteSommelier, async (req, res) => {
   const { vino, pregunta } = req.body;
   if (!vino || !pregunta) return res.status(400).json({ error: 'Faltan datos' });
   registrarUsoSommelier('pregunta_vino');
@@ -412,7 +424,7 @@ Respondé de forma breve, cálida y concreta (máximo 3-4 frases). Si pregunta p
   }
 });
 
-app.post('/api/sommelier', async (req, res) => {
+app.post('/api/sommelier', limiteSommelier, async (req, res) => {
   const { perfil, contexto, preferenciasGenerales, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });
   registrarUsoSommelier('vino');
@@ -504,7 +516,7 @@ El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y brev
 
 // ── SOMMELIER DE PRODUCTOS (aceites, vinagres, aceitunas) ──────────────────
 
-app.post('/api/sommelier-productos', async (req, res) => {
+app.post('/api/sommelier-productos', limiteSommelier, async (req, res) => {
   const { contexto, productos } = req.body;
   if (!productos || productos.length === 0) return res.status(400).json({ error: 'Sin productos' });
   registrarUsoSommelier('producto');
