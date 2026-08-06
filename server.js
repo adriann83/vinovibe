@@ -302,6 +302,19 @@ app.post('/api/clientes', async (req, res) => {
   }
 });
 
+app.put('/api/clientes/:id', requireAuth, async (req, res) => {
+  const { nombre, email, telefono } = req.body;
+  try {
+    await db.execute({
+      sql: 'UPDATE clientes SET nombre=?, email=?, telefono=? WHERE id=?',
+      args: [nombre, email||null, telefono||null, req.params.id]
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: 'No se pudo actualizar (¿email duplicado?)' });
+  }
+});
+
 app.get('/api/clientes/:nombre/historial', async (req, res) => {
   const nombre = decodeURIComponent(req.params.nombre);
   try {

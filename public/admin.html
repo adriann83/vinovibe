@@ -277,7 +277,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <div class="form-group"><label>Email</label><input id="c-email" type="email" placeholder="maria@email.com"></div>
       <div class="form-group full"><label>Teléfono</label><input id="c-telefono" placeholder="11 1234-5678"></div>
     </div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="agregarCliente()">Registrar cliente</button></div>
+    <div class="btn-row"><button class="btn btn-primary" id="btn-cliente" onclick="agregarCliente()">Registrar cliente</button></div>
+    <div id="cancelar-edicion-cliente" style="display:none;margin-top:8px"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="cancelarEdicionCliente()">Cancelar edición</button></div>
   </div>
   <div class="table-wrap"><table>
     <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Registrado</th><th>Historial</th></tr></thead>
@@ -1225,21 +1226,53 @@ async function cambiarEstado(id,estado){
   loadPedidos();
 }
 
+let clientesData=[];
+
 async function loadClientes(){
   const c=await fetch(API+'/clientes').then(r=>r.json());
-  document.getElementById('tabla-clientes').innerHTML=c.map(x=>`<tr><td><strong>${x.nombre}</strong></td><td>${x.email||'-'}</td><td>${x.telefono||'-'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="buscarHistorialDirecto('${x.nombre}')">Ver historial</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin clientes</td></tr>';
+  clientesData=c;
+  document.getElementById('tabla-clientes').innerHTML=c.map(x=>`<tr><td><strong>${x.nombre}</strong></td><td>${x.email||'-'}</td><td>${x.telefono||'-'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td style="white-space:nowrap"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);margin-right:4px" onclick="editarCliente(${x.id})">✎ Editar</button><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="buscarHistorialDirecto('${x.nombre}')">Ver historial</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin clientes</td></tr>';
+}
+
+let clienteEditandoId=null;
+
+function editarCliente(id){
+  const c=clientesData.find(x=>x.id===id);
+  if(!c)return;
+  clienteEditandoId=id;
+  document.getElementById('c-nombre').value=c.nombre||'';
+  document.getElementById('c-email').value=c.email||'';
+  document.getElementById('c-telefono').value=c.telefono||'';
+  document.getElementById('btn-cliente').textContent='Guardar cambios';
+  document.getElementById('cancelar-edicion-cliente').style.display='block';
+  document.getElementById('c-nombre').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelarEdicionCliente(){
+  clienteEditandoId=null;
+  document.getElementById('c-nombre').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-telefono').value='';
+  document.getElementById('btn-cliente').textContent='Registrar cliente';
+  document.getElementById('cancelar-edicion-cliente').style.display='none';
 }
 
 async function agregarCliente(){
   const b={nombre:document.getElementById('c-nombre').value,email:document.getElementById('c-email').value,telefono:document.getElementById('c-telefono').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
-  const r=await fetch(API+'/clientes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  const editando=clienteEditandoId!==null;
+  const url=editando?(API+'/clientes/'+clienteEditandoId):(API+'/clientes');
+  const method=editando?'PUT':'POST';
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
   const d=await r.json();
   if(d.error)return alert(d.error);
-  document.getElementById('c-nombre').value='';
-  document.getElementById('c-email').value='';
-  document.getElementById('c-telefono').value='';
-  alert('✓ Cliente registrado');
+  if(editando)cancelarEdicionCliente();
+  else{
+    document.getElementById('c-nombre').value='';
+    document.getElementById('c-email').value='';
+    document.getElementById('c-telefono').value='';
+  }
+  alert(editando?'✓ Cliente actualizado':'✓ Cliente registrado');
   loadClientes();
 }
 
