@@ -1357,7 +1357,20 @@ async function consultarSommelier(){
   finally{document.getElementById('loading-sommelier').style.display='none';btn.disabled=false;btn.textContent='✦ Pedir recomendación';}
 }
 
+async function cargarBotonWhatsappFlotante(){
+  try{
+    const cfg=await fetch(API+'/config').then(r=>r.json());
+    if(!cfg.whatsapp)return;
+    const numero=cfg.whatsapp.replace(/\D/g,'');
+    const msg=encodeURIComponent('¡Hola! Te escribo desde VinoVibe, quería hacerte una consulta 🍷');
+    const btn=document.getElementById('btn-whatsapp-flotante');
+    btn.href=`https://wa.me/${numero}?text=${msg}`;
+    btn.style.display='flex';
+  }catch(e){}
+}
+
 renderTabs('consumidor');
-</script>
+cargarBotonWhatsappFlotante();
+</script><a id="btn-whatsapp-flotante" href="#" target="_blank" style="display:none;position:fixed;bottom:22px;right:22px;width:56px;height:56px;background:#25D366;border-radius:50%;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:999;text-decoration:none;font-size:28px">📲</a>
 </body>
 </html>
