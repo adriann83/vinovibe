@@ -93,7 +93,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .star-btn.on{color:var(--gold)}
 .stock-alert{background:#FFF3DC;border:1px solid #F4A400;border-radius:10px;padding:10px 14px;font-size:12px;color:#8B5E00;margin-bottom:10px}
 .vino-card{background:var(--white);border-radius:14px;padding:18px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
-#catalogo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#catalogo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
 .pg-card{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
 .pg-photo-wrap{position:relative;width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#5A1F2A,#2A0E14)}
 .pg-photo{width:100%;height:100%;object-fit:cover;display:block}
@@ -120,6 +120,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <button onclick="irCatalogo()" style="background:#B8860B;color:#1a1410;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer">Ver catálogo</button>
 </div>
 <div class="tabs-bar" id="tabs-bar"></div>
+<div id="toast-carrito" style="display:none;position:fixed;top:80px;right:16px;left:16px;max-width:340px;margin-left:auto;background:var(--white);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px;z-index:1000;display:flex;gap:10px;align-items:center">
+  <img id="toast-carrito-img" style="width:44px;height:60px;object-fit:cover;border-radius:6px;background:linear-gradient(180deg,#5A1F2A,#2A0E14);flex-shrink:0">
+  <div style="flex:1;min-width:0">
+    <div id="toast-carrito-nombre" style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <div id="toast-carrito-detalle" style="font-size:12px;color:var(--smoke)"></div>
+    <div style="font-size:11px;color:#256B25;font-weight:600;margin-top:2px">✓ Agregado al carrito</div>
+  </div>
+</div>
 
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
@@ -526,8 +534,9 @@ function irCatalogo(){
 function renderTabs(modo){
   const tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
   const bar=document.getElementById('tabs-bar');
-  bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showPage('${t.id}',this)">${t.label}</button>`).join('');
+  bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showPage('${t.id}',this)">${t.label}${t.id==='mis-pedidos'?' <span id="badge-carrito" style="display:none;background:var(--garnet);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;margin-left:4px"></span>':''}</button>`).join('');
   showPage(tabs[0].id,bar.querySelector('.tab-btn'));
+  actualizarBadgeCarrito();
 }
 
 function showPage(id,btn){
@@ -828,13 +837,13 @@ function renderCatalogo(vinos){
         <div class="pg-nombre">${v.nombre}</div>
         <div class="pg-bodega">${v.bodega}${v.varietal?' · '+v.varietal:''}</div>
         <div class="pg-precio">$${Number(v.precio).toLocaleString('es-AR')}</div>
-        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock})" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
+        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock},'${(v.foto_url||'').replace(/'/g,"\\'")}')" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function agregarAlPedidoRapido(id,nombre,precio,stock){
+function agregarAlPedidoRapido(id,nombre,precio,stock,foto){
   const qtyInput=document.getElementById('qty-vino-'+id);
   let cant=qtyInput?parseInt(qtyInput.value)||1:1;
   if(stock!==undefined&&cant>stock)cant=stock;
@@ -842,7 +851,29 @@ function agregarAlPedidoRapido(id,nombre,precio,stock){
   const ex=itemsMiPedido.find(x=>x.vino_id===id);
   if(ex)ex.cantidad+=cant;
   else itemsMiPedido.push({vino_id:id,nombre,precio,cantidad:cant});
-  alert('✓ '+nombre+' x'+cant+' agregado al pedido');
+  mostrarToastCarrito(foto,nombre,cant,precio);
+  actualizarBadgeCarrito();
+}
+
+function actualizarBadgeCarrito(){
+  const total=itemsMiPedido.reduce((s,x)=>s+x.cantidad,0);
+  const badge=document.getElementById('badge-carrito');
+  if(!badge)return;
+  if(total>0){badge.textContent=total;badge.style.display='inline-flex';}
+  else badge.style.display='none';
+}
+
+let toastCarritoTimeout=null;
+function mostrarToastCarrito(foto,nombre,cant,precio){
+  const toast=document.getElementById('toast-carrito');
+  const img=document.getElementById('toast-carrito-img');
+  if(foto){img.src=foto;img.onerror=()=>{img.style.display='none';};img.style.display='block';}
+  else img.style.display='none';
+  document.getElementById('toast-carrito-nombre').textContent=nombre;
+  document.getElementById('toast-carrito-detalle').textContent=`${cant} x $${Number(precio).toLocaleString('es-AR')}`;
+  toast.style.display='flex';
+  clearTimeout(toastCarritoTimeout);
+  toastCarritoTimeout=setTimeout(()=>{toast.style.display='none';},2800);
 }
 
 // ── CATÁLOGO PRODUCTOS (aceites, aceitunas, etc.) ──
@@ -884,7 +915,7 @@ function renderProductosCatalogo(productos){
           <div style="display:flex;gap:6px;align-items:center">
             <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaProducto(${p.id})">📋 Ficha</button>
             ${p.stock>0?`<input id="qty-prod-${p.id}" type="number" value="1" min="1" max="${p.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
-            <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock})" ${p.stock===0?'disabled':''}>+ Pedir</button>
+            <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock},'${(p.foto_url||'').replace(/'/g,"\\'")}')" ${p.stock===0?'disabled':''}>+ Pedir</button>
           </div>
         </div>
       </div>
@@ -892,7 +923,7 @@ function renderProductosCatalogo(productos){
   }).join('');
 }
 
-function agregarProductoAlPedidoRapido(id,nombre,precio,stock){
+function agregarProductoAlPedidoRapido(id,nombre,precio,stock,foto){
   const qtyInput=document.getElementById('qty-prod-'+id);
   let cant=qtyInput?parseInt(qtyInput.value)||1:1;
   if(stock!==undefined&&cant>stock)cant=stock;
@@ -900,7 +931,8 @@ function agregarProductoAlPedidoRapido(id,nombre,precio,stock){
   const ex=itemsMiPedido.find(x=>x.producto_id===id);
   if(ex)ex.cantidad+=cant;
   else itemsMiPedido.push({producto_id:id,nombre,precio,cantidad:cant});
-  alert('✓ '+nombre+' x'+cant+' agregado al pedido');
+  mostrarToastCarrito(foto,nombre,cant,precio);
+  actualizarBadgeCarrito();
 }
 
 // ── FICHA VINO ──
@@ -1006,7 +1038,7 @@ async function verFichaVino(id){
           <div style="font-size:22px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
           <div style="display:flex;gap:8px">
             <button class="btn" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="cerrarFicha()">Volver</button>
-            <button class="btn btn-gold" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio});cerrarFicha()" ${v.stock===0?'disabled':''}>+ Pedir</button>
+            <button class="btn btn-gold" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},undefined,'${(v.foto_url||'').replace(/'/g,"\\'")}');cerrarFicha()" ${v.stock===0?'disabled':''}>+ Pedir</button>
           </div>
         </div>
       </div>`;
@@ -1063,6 +1095,7 @@ async function mostrarDatosTransferencia(){
 }
 
 function renderItemsMiPedido(){
+  actualizarBadgeCarrito();
   const vacio=document.getElementById('carrito-vacio');
   const itemsDiv=document.getElementById('carrito-items');
   const totalDiv=document.getElementById('carrito-total');
@@ -1120,6 +1153,7 @@ async function confirmarMiPedido(){
   historial.unshift({fecha:new Date().toISOString(),cliente,tipo,total,items});
   localStorage.setItem('mis_pedidos',JSON.stringify(historial.slice(0,20)));
   itemsMiPedido=[];
+  actualizarBadgeCarrito();
   document.getElementById('carrito-items').innerHTML='';
   document.getElementById('carrito-total').style.display='none';
   document.getElementById('carrito-vacio').style.display='none';
