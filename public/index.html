@@ -93,6 +93,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .star-btn.on{color:var(--gold)}
 .stock-alert{background:#FFF3DC;border:1px solid #F4A400;border-radius:10px;padding:10px 14px;font-size:12px;color:#8B5E00;margin-bottom:10px}
 .vino-card{background:var(--white);border-radius:14px;padding:18px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
+#catalogo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pg-card{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
+.pg-photo-wrap{position:relative;width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#5A1F2A,#2A0E14)}
+.pg-photo{width:100%;height:100%;object-fit:cover;display:block}
+.pg-badge-match{position:absolute;top:8px;left:8px;background:rgba(196,163,90,.92);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:50px}
+.pg-badge-stock{position:absolute;top:8px;right:8px;background:rgba(232,160,32,.95);color:#fff;font-size:9px;font-weight:600;padding:3px 7px;border-radius:50px}
+.pg-badge-agotado{position:absolute;inset:0;background:rgba(20,10,12,.6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;letter-spacing:.03em}
+.pg-info{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column}
+.pg-nombre{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--ink);line-height:1.2;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pg-bodega{font-size:10.5px;color:var(--smoke);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-precio{font-size:17px;font-weight:600;color:var(--garnet);margin-bottom:8px}
+.pg-add{width:100%;margin-top:auto}
 .vino-bottle{width:44px;height:64px;background:linear-gradient(180deg,#2E0E1C,#100810);border-radius:7px 7px 4px 4px;flex-shrink:0;position:relative}
 .vino-bottle::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:#2E0E1C;border-radius:3px 3px 0 0}
 @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.taste-bars{grid-template-columns:1fr}}
@@ -803,24 +815,20 @@ function renderCatalogo(vinos){
   grid.innerHTML=vinos.map(v=>{
     const diff=Math.abs(v.tanino-perfil.tanino)+Math.abs(v.acidez-perfil.acidez)+Math.abs(v.cuerpo-perfil.cuerpo)+Math.abs(v.dulzor-perfil.dulzor);
     const match=Math.max(Math.round(100-(diff/40)*100),40);
-    const stockColor=v.stock<5?'#C0392B':v.stock<15?'#E8A020':'#256B25';
-    return`<div class="vino-card">
-      ${v.foto_url?`<img src="${v.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\'></div>'">`:'<div class="vino-bottle"></div>'}
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${v.nombre}</div>
-          <div style="background:rgba(196,163,90,.15);color:#C4A35A;font-size:10px;font-weight:600;padding:2px 7px;border-radius:50px">${match}% match</div>
-        </div>
-        <div style="font-size:11px;color:var(--smoke);margin-bottom:10px">${v.bodega} · ${v.varietal||''} · ${v.region||'Argentina'} ${v.anada?'· '+v.anada:''}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
-          <div style="font-size:11px;color:${stockColor};font-weight:500">${v.stock>0?'● '+v.stock+' disponibles':'✕ Sin stock'}</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaVino(${v.id})">📋 Ficha</button>
-            ${v.stock>0?`<input id="qty-vino-${v.id}" type="number" value="1" min="1" max="${v.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
-            <button class="btn btn-gold btn-sm" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock})" ${v.stock===0?'disabled':''}>+ Pedir</button>
-          </div>
-        </div>
+    const sinStock=v.stock===0;
+    const pocoStock=!sinStock&&v.stock<10;
+    return`<div class="pg-card" onclick="verFichaVino(${v.id})">
+      <div class="pg-photo-wrap">
+        ${v.foto_url?`<img src="${v.foto_url}" class="pg-photo" onerror="this.remove()">`:''}
+        <div class="pg-badge-match">✦ ${match}%</div>
+        ${pocoStock?`<div class="pg-badge-stock">Poco stock</div>`:''}
+        ${sinStock?`<div class="pg-badge-agotado">Sin stock</div>`:''}
+      </div>
+      <div class="pg-info">
+        <div class="pg-nombre">${v.nombre}</div>
+        <div class="pg-bodega">${v.bodega}${v.varietal?' · '+v.varietal:''}</div>
+        <div class="pg-precio">$${Number(v.precio).toLocaleString('es-AR')}</div>
+        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock})" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
       </div>
     </div>`;
   }).join('');
