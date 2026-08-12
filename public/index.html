@@ -94,6 +94,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .stock-alert{background:#FFF3DC;border:1px solid #F4A400;border-radius:10px;padding:10px 14px;font-size:12px;color:#8B5E00;margin-bottom:10px}
 .vino-card{background:var(--white);border-radius:14px;padding:18px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
 #catalogo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+#productos-catalogo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 .pg-card{background:var(--white);border-radius:10px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
 .pg-photo-wrap{position:relative;width:100%;height:150px;background:linear-gradient(160deg,#4A1620,#2A0E14);padding:10px;box-sizing:border-box}
 .pg-photo{width:100%;height:100%;object-fit:contain;display:block}
@@ -900,24 +901,19 @@ function renderProductosCatalogo(productos){
   const grid=document.getElementById('productos-catalogo-grid');
   if(!productos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">No se encontraron productos</div>';return;}
   grid.innerHTML=productos.map(p=>{
-    const stockColor=p.stock<5?'#C0392B':p.stock<15?'#E8A020':'#256B25';
-    return`<div class="vino-card">
-      ${p.foto_url?`<img src="${p.foto_url}" class="vino-bottle" style="width:44px;height:64px;object-fit:cover;border-radius:7px" onerror="this.outerHTML='<div class=\\'vino-bottle\\' style=\\'background:linear-gradient(180deg,#4A6B2A,#2E4318)\\'></div>'">`:'<div class="vino-bottle" style="background:linear-gradient(180deg,#4A6B2A,#2E4318)"></div>'}
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink)">${p.nombre}</div>
-        </div>
-        <div style="font-size:11px;color:var(--smoke);margin-bottom:4px">${p.categoria}${p.marca?' · '+p.marca:''}</div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:10px">${p.descripcion||''}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div style="font-size:20px;font-weight:600;color:var(--garnet)">$${Number(p.precio).toLocaleString('es-AR')}</div>
-          <div style="font-size:11px;color:${stockColor};font-weight:500">${p.stock>0?'● '+p.stock+' disponibles':'✕ Sin stock'}</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="verFichaProducto(${p.id})">📋 Ficha</button>
-            ${p.stock>0?`<input id="qty-prod-${p.id}" type="number" value="1" min="1" max="${p.stock}" style="width:52px;padding:8px 4px;text-align:center">`:''}
-            <button class="btn btn-gold btn-sm" onclick="agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock},'${(p.foto_url||'').replace(/'/g,"\\'")}')" ${p.stock===0?'disabled':''}>+ Pedir</button>
-          </div>
-        </div>
+    const sinStock=p.stock===0;
+    const pocoStock=!sinStock&&p.stock<10;
+    return`<div class="pg-card" onclick="verFichaProducto(${p.id})">
+      <div class="pg-photo-wrap">
+        ${p.foto_url?`<img src="${p.foto_url}" class="pg-photo" onerror="this.remove()">`:''}
+        ${pocoStock?`<div class="pg-badge-stock">Poco stock</div>`:''}
+        ${sinStock?`<div class="pg-badge-agotado">Sin stock</div>`:''}
+      </div>
+      <div class="pg-info">
+        <div class="pg-nombre">${p.nombre}</div>
+        <div class="pg-bodega">${p.categoria}${p.marca?' · '+p.marca:''}</div>
+        <div class="pg-precio">$${Number(p.precio).toLocaleString('es-AR')}</div>
+        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarProductoAlPedidoRapido(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock},'${(p.foto_url||'').replace(/'/g,"\\'")}')" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
       </div>
     </div>`;
   }).join('');
