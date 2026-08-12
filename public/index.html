@@ -535,7 +535,7 @@ function irCatalogo(){
 function renderTabs(modo){
   const tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
   const bar=document.getElementById('tabs-bar');
-  bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showPage('${t.id}',this)">${t.label}${t.id==='mis-pedidos'?' <span id="badge-carrito" style="display:none;background:var(--garnet);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;margin-left:4px"></span>':''}</button>`).join('');
+  bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}"${t.id==='mis-pedidos'?' id="tab-mis-pedidos"':''} onclick="showPage('${t.id}',this)">${t.label}${t.id==='mis-pedidos'?' <span id="badge-carrito" style="display:none;background:var(--garnet);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;margin-left:4px"></span>':''}</button>`).join('');
   showPage(tabs[0].id,bar.querySelector('.tab-btn'));
   actualizarBadgeCarrito();
 }
@@ -872,6 +872,23 @@ function mostrarToastCarrito(foto,nombre,cant,precio){
   else img.style.display='none';
   document.getElementById('toast-carrito-nombre').textContent=nombre;
   document.getElementById('toast-carrito-detalle').textContent=`${cant} x $${Number(precio).toLocaleString('es-AR')}`;
+
+  // Posicionamos el toast justo debajo de la pestaña "Mi Carrito", sea cual sea su ubicación real en pantalla
+  const tabCarrito=document.getElementById('tab-mis-pedidos');
+  const toastWidth=Math.min(300,window.innerWidth-16);
+  if(tabCarrito){
+    const rect=tabCarrito.getBoundingClientRect();
+    let left=rect.left+rect.width/2-toastWidth/2;
+    left=Math.max(8,Math.min(left,window.innerWidth-toastWidth-8));
+    toast.style.left=left+'px';
+    toast.style.right='auto';
+    toast.style.top=(rect.bottom+8)+'px';
+  }else{
+    toast.style.left='auto';
+    toast.style.right='16px';
+    toast.style.top='108px';
+  }
+  toast.style.width=toastWidth+'px';
   toast.style.display='flex';
   clearTimeout(toastCarritoTimeout);
   toastCarritoTimeout=setTimeout(()=>{toast.style.display='none';},2800);
