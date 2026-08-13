@@ -840,7 +840,7 @@ function renderCatalogo(vinos){
         <div class="pg-nombre">${v.nombre}</div>
         <div class="pg-bodega">${v.bodega}${v.varietal?' · '+v.varietal:''}</div>
         <div class="pg-precio">$${Number(v.precio).toLocaleString('es-AR')}</div>
-        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},${v.stock},'${(v.foto_url||'').replace(/'/g,"\\'")}')" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
+        <button class="btn btn-gold btn-sm pg-add" onclick="event.stopPropagation();agregarAlPedidoRapido(${v.id},'${(v.nombre+(v.varietal?' - '+v.varietal:'')).replace(/'/g,"\\'")}',${v.precio},${v.stock},'${(v.foto_url||'').replace(/'/g,"\\'")}')" ${sinStock?'disabled':''}>${sinStock?'Sin stock':'Comprar'}</button>
       </div>
     </div>`;
   }).join('');
@@ -1054,7 +1054,7 @@ async function verFichaVino(id){
           <div style="font-size:22px;font-weight:600;color:var(--garnet)">$${Number(v.precio).toLocaleString('es-AR')}</div>
           <div style="display:flex;gap:8px">
             <button class="btn" style="background:var(--cream);border:1px solid var(--border);color:var(--ink)" onclick="cerrarFicha()">Volver</button>
-            <button class="btn btn-gold" onclick="agregarAlPedidoRapido(${v.id},'${v.nombre.replace(/'/g,"\\'")}',${v.precio},undefined,'${(v.foto_url||'').replace(/'/g,"\\'")}');cerrarFicha()" ${v.stock===0?'disabled':''}>+ Pedir</button>
+            <button class="btn btn-gold" onclick="agregarAlPedidoRapido(${v.id},'${(v.nombre+(v.varietal?' - '+v.varietal:'')).replace(/'/g,"\\'")}',${v.precio},undefined,'${(v.foto_url||'').replace(/'/g,"\\'")}');cerrarFicha()" ${v.stock===0?'disabled':''}>+ Pedir</button>
           </div>
         </div>
       </div>`;
