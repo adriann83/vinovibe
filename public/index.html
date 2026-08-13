@@ -418,7 +418,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Finalizar pedido</div>
     <div class="form-grid">
       <div class="form-group"><label>Tu nombre</label><input id="mp-cliente" placeholder="Tu nombre"></div>
-      <div class="form-group"><label>Entrega</label><select id="mp-tipo"><option value="retiro">🏪 Retiro en vinoteca</option><option value="envio">🚚 Envío a domicilio</option></select></div>
+      <div class="form-group"><label>Tu WhatsApp</label><input id="mp-telefono" type="tel" placeholder="Ej: 3411234567" inputmode="tel"></div>
+      <div class="form-group"><label>Entrega</label><select id="mp-tipo" onchange="toggleDireccionCheckout()"><option value="retiro">🏪 Retiro en vinoteca</option><option value="envio">🚚 Envío a domicilio</option></select></div>
+      <div class="form-group" id="mp-direccion-wrap" style="display:none"><label>Dirección de entrega</label><input id="mp-direccion" placeholder="Calle, número, localidad"></div>
     </div>
     <div id="mp-datos-pago" style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:14px;margin:14px 0;display:none">
       <div style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--smoke);margin-bottom:8px">💳 Para confirmar tu pedido, transferí a:</div>
@@ -1085,9 +1087,15 @@ async function guardarFichaVino(){
 }
 
 // ── MIS PEDIDOS ──
+function toggleDireccionCheckout(){
+  const esEnvio=document.getElementById('mp-tipo').value==='envio';
+  document.getElementById('mp-direccion-wrap').style.display=esEnvio?'block':'none';
+}
+
 async function loadMisPedidos(){
   renderItemsMiPedido();
   if(perfilGuardado?.nombre)document.getElementById('mp-cliente').value=perfilGuardado.nombre;
+  if(perfilGuardado?.telefono)document.getElementById('mp-telefono').value=perfilGuardado.telefono;
   renderMiHistorial();
   mostrarDatosTransferencia();
 }
@@ -1157,12 +1165,20 @@ function quitarDelCarrito(i){
 
 async function confirmarMiPedido(){
   const cliente=document.getElementById('mp-cliente').value;
+  const telefono=document.getElementById('mp-telefono').value.trim();
   const tipo=document.getElementById('mp-tipo').value;
+  const direccion=document.getElementById('mp-direccion').value.trim();
   if(!cliente)return alert('Ingresá tu nombre');
+  if(!telefono)return alert('Ingresá tu WhatsApp, así te podemos contactar para coordinar la entrega');
+  if(tipo==='envio'&&!direccion)return alert('Ingresá la dirección de entrega');
   if(!itemsMiPedido.length)return alert('Tu carrito está vacío');
   const total=itemsMiPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
   const items=[...itemsMiPedido];
-  const pedidoRes=await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,items,total,tipo})}).then(r=>r.json());
+  const pedidoRes=await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,telefono,direccion,items,total,tipo})}).then(r=>r.json());
+  const perfilActual=perfilGuardado||{};
+  perfilActual.nombre=cliente;perfilActual.telefono=telefono;
+  localStorage.setItem('vinovibe_perfil',JSON.stringify(perfilActual));
+  perfilGuardado=perfilActual;
   const historial=JSON.parse(localStorage.getItem('mis_pedidos')||'[]');
   historial.unshift({fecha:new Date().toISOString(),cliente,tipo,total,items});
   localStorage.setItem('mis_pedidos',JSON.stringify(historial.slice(0,20)));

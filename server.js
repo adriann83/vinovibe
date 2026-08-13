@@ -95,7 +95,9 @@ async function initDb() {
     'ALTER TABLE vinos ADD COLUMN foto_url TEXT',
     'ALTER TABLE productos ADD COLUMN foto_url TEXT',
     'ALTER TABLE productos ADD COLUMN ficha_pdf_url TEXT',
-    'ALTER TABLE pedidos ADD COLUMN metodo_pago TEXT'
+    'ALTER TABLE pedidos ADD COLUMN metodo_pago TEXT',
+    'ALTER TABLE pedidos ADD COLUMN telefono TEXT',
+    'ALTER TABLE pedidos ADD COLUMN direccion TEXT'
   ]) {
     try { await db.execute(alter); } catch (e) { /* ya existe, la ignoramos */ }
   }
@@ -350,11 +352,11 @@ app.get('/api/sommelier-uso', requireAuth, async (req, res) => {
 });
 
 app.post('/api/pedidos', async (req, res) => {
-  const { cliente_nombre, items, total, tipo } = req.body;
+  const { cliente_nombre, telefono, direccion, items, total, tipo } = req.body;
   try {
     const result = await db.execute({
-      sql: 'INSERT INTO pedidos (cliente_nombre,items,total,tipo,estado,metodo_pago) VALUES (?,?,?,?,?,?)',
-      args: [cliente_nombre, JSON.stringify(items), total, tipo||'retiro', 'pendiente_pago', 'transferencia']
+      sql: 'INSERT INTO pedidos (cliente_nombre,telefono,direccion,items,total,tipo,estado,metodo_pago) VALUES (?,?,?,?,?,?,?,?)',
+      args: [cliente_nombre, telefono||null, direccion||null, JSON.stringify(items), total, tipo||'retiro', 'pendiente_pago', 'transferencia']
     });
     const pedidoId = Number(result.lastInsertRowid);
     // El stock ya NO se descuenta acá. Se descuenta recién cuando el pedido pasa a "pagado"
