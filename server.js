@@ -97,7 +97,9 @@ async function initDb() {
     'ALTER TABLE productos ADD COLUMN ficha_pdf_url TEXT',
     'ALTER TABLE pedidos ADD COLUMN metodo_pago TEXT',
     'ALTER TABLE pedidos ADD COLUMN telefono TEXT',
-    'ALTER TABLE pedidos ADD COLUMN direccion TEXT'
+    'ALTER TABLE pedidos ADD COLUMN direccion TEXT',
+    'ALTER TABLE productos ADD COLUMN tipo TEXT DEFAULT \'gourmet\'',
+    'ALTER TABLE clientes ADD COLUMN direccion TEXT'
   ]) {
     try { await db.execute(alter); } catch (e) { /* ya existe, la ignoramos */ }
   }
@@ -252,24 +254,24 @@ app.get('/api/productos', async (req, res) => {
 });
 
 app.post('/api/productos', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     const result = await db.execute({
-      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion,foto_url,ficha_pdf_url) VALUES (?,?,?,?,?,?,?,?)`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null]
+      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion,foto_url,ficha_pdf_url,tipo) VALUES (?,?,?,?,?,?,?,?,?)`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet']
     });
     res.json({ id: Number(result.lastInsertRowid) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/productos/:id', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     await db.execute({
-      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=?,foto_url=?,ficha_pdf_url=? WHERE id=?`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, req.params.id]
+      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=?,foto_url=?,ficha_pdf_url=?,tipo=? WHERE id=?`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet', req.params.id]
     });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -292,11 +294,11 @@ app.get('/api/clientes', requireAuth, async (req, res) => {
 });
 
 app.post('/api/clientes', async (req, res) => {
-  const { nombre, email, telefono } = req.body;
+  const { nombre, email, telefono, direccion } = req.body;
   try {
     const result = await db.execute({
-      sql: 'INSERT INTO clientes (nombre,email,telefono) VALUES (?,?,?)',
-      args: [nombre, email||null, telefono||null]
+      sql: 'INSERT INTO clientes (nombre,email,telefono,direccion) VALUES (?,?,?,?)',
+      args: [nombre, email||null, telefono||null, direccion||null]
     });
     res.json({ id: Number(result.lastInsertRowid) });
   } catch (err) {
@@ -305,16 +307,42 @@ app.post('/api/clientes', async (req, res) => {
 });
 
 app.put('/api/clientes/:id', requireAuth, async (req, res) => {
-  const { nombre, email, telefono } = req.body;
+  const { nombre, email, telefono, direccion } = req.body;
   try {
     await db.execute({
-      sql: 'UPDATE clientes SET nombre=?, email=?, telefono=? WHERE id=?',
-      args: [nombre, email||null, telefono||null, req.params.id]
+      sql: 'UPDATE clientes SET nombre=?, email=?, telefono=?, direccion=? WHERE id=?',
+      args: [nombre, email||null, telefono||null, direccion||null, req.params.id]
     });
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: 'No se pudo actualizar (¿email duplicado?)' });
   }
+});
+
+// Registra (o actualiza si ya existe por nombre) un cliente a partir de los datos de un pedido,
+// para no tener que volver a tipear nombre/teléfono/dirección a mano en la pestaña Clientes.
+app.post('/api/clientes/desde-pedido', requireAuth, async (req, res) => {
+  const { nombre, telefono, direccion } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Falta el nombre' });
+  try {
+    const existente = await db.execute({
+      sql: 'SELECT id FROM clientes WHERE LOWER(nombre)=LOWER(?)',
+      args: [nombre]
+    });
+    if (existente.rows.length) {
+      const id = existente.rows[0].id;
+      await db.execute({
+        sql: 'UPDATE clientes SET telefono=COALESCE(?,telefono), direccion=COALESCE(?,direccion) WHERE id=?',
+        args: [telefono || null, direccion || null, id]
+      });
+      return res.json({ id, actualizado: true });
+    }
+    const result = await db.execute({
+      sql: 'INSERT INTO clientes (nombre,telefono,direccion) VALUES (?,?,?)',
+      args: [nombre, telefono || null, direccion || null]
+    });
+    res.json({ id: Number(result.lastInsertRowid), actualizado: false });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/clientes/:nombre/historial', async (req, res) => {
@@ -617,6 +645,88 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
     console.error('Error en sommelier de productos IA, usando respaldo:', err.message);
     const f = fallback();
     res.json({ recomendaciones: [{ ...f, foto_url: (productos.find(p => p.nombre === f.producto_recomendado) || {}).foto_url || null }], ...f });
+  }
+});
+
+// ── BARTENDER IA (whisky, vermut, aperitivos, fernet, etc.) ──
+app.post('/api/bartender', limiteSommelier, async (req, res) => {
+  const { contexto, bebidas } = req.body;
+  if (!bebidas || bebidas.length === 0) return res.status(400).json({ error: 'Sin bebidas' });
+  registrarUsoSommelier('bartender');
+
+  const fallback = () => {
+    const disponibles = bebidas.filter(b => (b.stock || 0) > 0);
+    const base = disponibles.length ? disponibles : bebidas;
+    const elegido = base[Math.floor(Math.random() * base.length)];
+    return {
+      producto_recomendado: elegido.nombre,
+      marca: elegido.marca,
+      match_porcentaje: 70,
+      razon: elegido.descripcion || 'Buena opción de nuestra barra.',
+      uso_sugerido: 'Ideal solo o en las rocas'
+    };
+  };
+
+  try {
+    const catalogoTexto = bebidas.map(b =>
+      `- id:${b.id} | ${b.nombre} (${b.marca || 'sin marca'}) | Categoría: ${b.categoria || '-'} | Stock:${b.stock} | Notas: ${b.descripcion || 'sin notas'}`
+    ).join('\n');
+
+    const prompt = `Sos un bartender experto ayudando a elegir la mejor bebida de esta barra específica para un cliente.
+
+BARRA DISPONIBLE:
+${catalogoTexto}
+
+${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá las bebidas más versátiles o destacadas de la barra.'}
+
+Elegí hasta 3 bebidas ADECUADAS de la lista de arriba (solo de esa lista, usando su id exacto), ordenadas de la más a la menos recomendada, considerando el momento/ocasión que describió el cliente (para tomar solo, para compartir, para un trago largo, etc.) y las notas reales de cada bebida. Si el cliente pide un trago mezclado (ej. "gin tonic", "fernet con cola"), recomendá la bebida base de la barra que mejor sirva para prepararlo, aclarando en la razón que el resto de los ingredientes (hielo, gaseosa, limón, etc.) no forman parte del catálogo. Si la barra tiene menos de 3 bebidas que realmente encajen bien, devolvé menos (no fuerces opciones malas).
+
+Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
+[{"id": <id de la bebida>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué esta bebida es una buena opción, mencionando notas reales de la bebida>", "uso_sugerido": "<breve sugerencia de cómo tomarla, 3-6 palabras>"}]`;
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 700,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
+    const limpio = textoRespuesta.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(limpio);
+    const lista = Array.isArray(data) ? data : [data];
+
+    const recomendaciones = lista
+      .map(item => {
+        const b = bebidas.find(x => x.id === item.id);
+        if (!b) return null;
+        return {
+          id: b.id,
+          producto_recomendado: b.nombre,
+          marca: b.marca,
+          categoria: b.categoria,
+          precio: b.precio,
+          foto_url: b.foto_url || null,
+          match_porcentaje: item.match_porcentaje || 85,
+          razon: limpiarMarkdown(item.razon) || '',
+          uso_sugerido: item.uso_sugerido || ''
+        };
+      })
+      .filter(Boolean);
+
+    if (!recomendaciones.length) throw new Error('La IA no eligió ninguna bebida válida de la barra');
+
+    res.json({
+      recomendaciones,
+      producto_recomendado: recomendaciones[0].producto_recomendado,
+      marca: recomendaciones[0].marca,
+      match_porcentaje: recomendaciones[0].match_porcentaje,
+      razon: recomendaciones[0].razon,
+      uso_sugerido: recomendaciones[0].uso_sugerido
+    });
+  } catch (err) {
+    console.error('Error en el Bartender IA, usando respaldo:', err.message);
+    const f = fallback();
+    res.json({ recomendaciones: [{ ...f, foto_url: (bebidas.find(b => b.nombre === f.producto_recomendado) || {}).foto_url || null }], ...f });
   }
 });
 

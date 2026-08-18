@@ -14,7 +14,7 @@ nav{background:var(--dark);padding:0 16px;height:56px;display:flex;align-items:c
 .nav-mode{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:50px;padding:3px}
 .mode-btn{padding:5px 14px;border:none;border-radius:50px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;background:transparent;color:rgba(245,242,238,.5);transition:all .2s}
 .mode-btn.active{background:var(--garnet);color:var(--cream)}
-.tabs-bar{background:var(--white);border-bottom:1px solid var(--border);padding:0 16px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs-bar{background:var(--white);border-bottom:1px solid var(--border);padding:0 16px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:99}
 .tabs-bar::-webkit-scrollbar{display:none}
 .tab-btn{padding:12px 16px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--smoke);border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
 .tab-btn.active{color:var(--garnet);border-bottom-color:var(--garnet)}
@@ -196,10 +196,20 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div id="pr-form-titulo" style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar producto</div>
     <div class="form-grid">
       <div class="form-group"><label>Nombre</label><input id="pr-nombre" placeholder="Aceite de oliva extra virgen"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="pr-tipo">
+          <option value="gourmet">🫒 Gourmet (Aceites y más)</option>
+          <option value="bebida">🍸 Bebida (Otras bebidas)</option>
+        </select>
+      </div>
       <div class="form-group"><label>Categoría</label>
         <select id="pr-categoria">
           <option value="Aceite de oliva">Aceite de oliva</option>
           <option value="Aceitunas">Aceitunas</option>
+          <option value="Whisky">Whisky</option>
+          <option value="Vermut">Vermut</option>
+          <option value="Aperitivo">Aperitivo</option>
+          <option value="Fernet">Fernet</option>
           <option value="Otro">Otro</option>
         </select>
       </div>
@@ -229,7 +239,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     </div>
   </div>
   <div class="table-wrap"><table>
-    <thead><tr><th>Producto</th><th>Categoría</th><th>Marca</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+    <thead><tr><th>Producto</th><th>Tipo</th><th>Categoría</th><th>Marca</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
     <tbody id="tabla-productos"></tbody>
   </table></div>
 </div>
@@ -275,7 +285,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div class="form-grid">
       <div class="form-group"><label>Nombre</label><input id="c-nombre" placeholder="María García"></div>
       <div class="form-group"><label>Email</label><input id="c-email" type="email" placeholder="maria@email.com"></div>
-      <div class="form-group full"><label>Teléfono</label><input id="c-telefono" placeholder="11 1234-5678"></div>
+      <div class="form-group"><label>Teléfono</label><input id="c-telefono" placeholder="11 1234-5678"></div>
+      <div class="form-group full"><label>Dirección</label><input id="c-direccion" placeholder="Calle, número, localidad"></div>
     </div>
     <div class="btn-row"><button class="btn btn-primary" id="btn-cliente" onclick="agregarCliente()">Registrar cliente</button></div>
     <div id="cancelar-edicion-cliente" style="display:none;margin-top:8px"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="cancelarEdicionCliente()">Cancelar edición</button></div>
@@ -1043,7 +1054,7 @@ let productoEditandoId=null;
 async function loadProductos(){
   const p=await fetch(API+'/productos').then(r=>r.json());
   productosData=p;
-  document.getElementById('tabla-productos').innerHTML=p.map(x=>`<tr><td style="display:flex;gap:10px;align-items:flex-start">${x.foto_url?`<img src="${x.foto_url}" style="width:32px;height:46px;object-fit:cover;border-radius:4px;flex-shrink:0">`:''}<div><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></div></td><td>${x.categoria}</td><td>${x.marca||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<5?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarProducto(${x.id})">✎ Editar</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarProducto(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--smoke)">Sin productos cargados</td></tr>';
+  document.getElementById('tabla-productos').innerHTML=p.map(x=>`<tr><td style="display:flex;gap:10px;align-items:flex-start">${x.foto_url?`<img src="${x.foto_url}" style="width:32px;height:46px;object-fit:cover;border-radius:4px;flex-shrink:0">`:''}<div><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></div></td><td>${x.tipo==='bebida'?'🍸 Bebida':'🫒 Gourmet'}</td><td>${x.categoria}</td><td>${x.marca||'-'}</td><td>$${Number(x.precio).toLocaleString('es-AR')}</td><td style="color:${x.stock<5?'#C0392B':'inherit'}">${x.stock} u.</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarProducto(${x.id})">✎ Editar</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarProducto(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--smoke)">Sin productos cargados</td></tr>';
 }
 
 function editarProducto(id){
@@ -1051,6 +1062,7 @@ function editarProducto(id){
   if(!p)return;
   productoEditandoId=id;
   document.getElementById('pr-nombre').value=p.nombre||'';
+  document.getElementById('pr-tipo').value=p.tipo||'gourmet';
   document.getElementById('pr-categoria').value=p.categoria||'Aceite de oliva';
   document.getElementById('pr-marca').value=p.marca||'';
   document.getElementById('pr-precio').value=p.precio||'';
@@ -1084,7 +1096,7 @@ function cancelarEdicionProducto(){
 }
 
 async function agregarProducto(){
-  const b={nombre:document.getElementById('pr-nombre').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value,foto_url:document.getElementById('pr-foto').value,ficha_pdf_url:document.getElementById('pr-pdf').value};
+  const b={nombre:document.getElementById('pr-nombre').value,tipo:document.getElementById('pr-tipo').value,categoria:document.getElementById('pr-categoria').value,marca:document.getElementById('pr-marca').value,precio:document.getElementById('pr-precio').value,stock:document.getElementById('pr-stock').value,descripcion:document.getElementById('pr-descripcion').value,foto_url:document.getElementById('pr-foto').value,ficha_pdf_url:document.getElementById('pr-pdf').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
   const editando=productoEditandoId!==null;
   const url=editando?(API+'/productos/'+productoEditandoId):(API+'/productos');
@@ -1095,6 +1107,7 @@ async function agregarProducto(){
   if(editando)cancelarEdicionProducto();
   else{
     document.getElementById('pr-nombre').value='';
+    document.getElementById('pr-tipo').value='gourmet';
     document.getElementById('pr-marca').value='';
     document.getElementById('pr-precio').value='';
     document.getElementById('pr-stock').value='';
@@ -1116,6 +1129,16 @@ async function eliminarProducto(id){
   loadProductos();
 }
 
+async function registrarClienteDesdePedido(datos){
+  if(!confirm(`¿Registrar/actualizar a "${datos.nombre}" como cliente con estos datos?\nTeléfono: ${datos.telefono||'-'}\nDirección: ${datos.direccion||'-'}`))return;
+  try{
+    const r=await fetch(API+'/clientes/desde-pedido',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(datos)});
+    const d=await r.json();
+    if(d.error)return alert(d.error);
+    alert(d.actualizado?'✓ Cliente actualizado con estos datos':'✓ Cliente registrado');
+  }catch(e){alert('No se pudo registrar el cliente');}
+}
+
 async function loadPedidos(){
   await loadVinos();
   const p=await fetch(API+'/pedidos').then(r=>r.json());
@@ -1126,7 +1149,8 @@ async function loadPedidos(){
     const telLimpio=(x.telefono||'').replace(/\D/g,'');
     const contactoHtml=x.telefono?`<div style="font-size:11px;margin-top:2px"><a href="https://wa.me/${telLimpio}" target="_blank" style="color:#256B25;text-decoration:none">📲 ${x.telefono}</a></div>`:`<div style="font-size:11px;color:#C0392B;margin-top:2px">⚠️ Sin teléfono</div>`;
     const direccionHtml=(x.tipo==='envio'&&x.direccion)?`<div style="font-size:11px;color:var(--smoke);margin-top:2px">📍 ${x.direccion}</div>`:'';
-    return `<tr ${filaStyle}><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong>${contactoHtml}${direccionHtml}</td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado.replace('_',' ')}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='pendiente_pago'?'selected':''} value="pendiente_pago">Pendiente de pago</option><option ${x.estado==='pagado'?'selected':''} value="pagado">Pagado</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo (antiguo)</option></select>${botonPago}</td><td><button class="btn btn-sm" onclick='generarComprobante(${JSON.stringify(x).replace(/'/g,"&apos;")})'>📄 PDF</button></td></tr>`;
+    const registrarBtn=`<button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);margin-top:4px;font-size:10px" onclick='registrarClienteDesdePedido(${JSON.stringify({nombre:x.cliente_nombre,telefono:x.telefono,direccion:x.direccion}).replace(/'/g,"&apos;")})'>＋ Registrar cliente</button>`;
+    return `<tr ${filaStyle}><td>#${x.id}</td><td><strong>${x.cliente_nombre}</strong>${contactoHtml}${direccionHtml}${registrarBtn}</td><td style="font-size:12px">${parsearItems(x.items)}</td><td>$${Number(x.total).toLocaleString('es-AR')}</td><td><span class="badge badge-${x.estado}">${x.estado.replace('_',' ')}</span></td><td>${x.tipo==='retiro'?'🏪':'🚚'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td><select onchange="cambiarEstado(${x.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border)"><option ${x.estado==='pendiente_pago'?'selected':''} value="pendiente_pago">Pendiente de pago</option><option ${x.estado==='pagado'?'selected':''} value="pagado">Pagado</option><option ${x.estado==='listo'?'selected':''} value="listo">Listo</option><option ${x.estado==='entregado'?'selected':''} value="entregado">Entregado</option><option ${x.estado==='nuevo'?'selected':''} value="nuevo">Nuevo (antiguo)</option></select>${botonPago}</td><td><button class="btn btn-sm" onclick='generarComprobante(${JSON.stringify(x).replace(/'/g,"&apos;")})'>📄 PDF</button></td></tr>`;
   }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--smoke)">Sin pedidos</td></tr>';
 }
 
@@ -1234,7 +1258,7 @@ let clientesData=[];
 async function loadClientes(){
   const c=await fetch(API+'/clientes').then(r=>r.json());
   clientesData=c;
-  document.getElementById('tabla-clientes').innerHTML=c.map(x=>`<tr><td><strong>${x.nombre}</strong></td><td>${x.email||'-'}</td><td>${x.telefono||'-'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td style="white-space:nowrap"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);margin-right:4px" onclick="editarCliente(${x.id})">✎ Editar</button><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="buscarHistorialDirecto('${x.nombre}')">Ver historial</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin clientes</td></tr>';
+  document.getElementById('tabla-clientes').innerHTML=c.map(x=>`<tr><td><strong>${x.nombre}</strong>${x.direccion?`<div style="font-size:11px;color:var(--smoke)">📍 ${x.direccion}</div>`:''}</td><td>${x.email||'-'}</td><td>${x.telefono||'-'}</td><td>${new Date(x.created_at).toLocaleDateString('es-AR')}</td><td style="white-space:nowrap"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);margin-right:4px" onclick="editarCliente(${x.id})">✎ Editar</button><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="buscarHistorialDirecto('${x.nombre}')">Ver historial</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--smoke)">Sin clientes</td></tr>';
 }
 
 let clienteEditandoId=null;
@@ -1246,6 +1270,7 @@ function editarCliente(id){
   document.getElementById('c-nombre').value=c.nombre||'';
   document.getElementById('c-email').value=c.email||'';
   document.getElementById('c-telefono').value=c.telefono||'';
+  document.getElementById('c-direccion').value=c.direccion||'';
   document.getElementById('btn-cliente').textContent='Guardar cambios';
   document.getElementById('cancelar-edicion-cliente').style.display='block';
   document.getElementById('c-nombre').scrollIntoView({behavior:'smooth',block:'center'});
@@ -1256,12 +1281,13 @@ function cancelarEdicionCliente(){
   document.getElementById('c-nombre').value='';
   document.getElementById('c-email').value='';
   document.getElementById('c-telefono').value='';
+  document.getElementById('c-direccion').value='';
   document.getElementById('btn-cliente').textContent='Registrar cliente';
   document.getElementById('cancelar-edicion-cliente').style.display='none';
 }
 
 async function agregarCliente(){
-  const b={nombre:document.getElementById('c-nombre').value,email:document.getElementById('c-email').value,telefono:document.getElementById('c-telefono').value};
+  const b={nombre:document.getElementById('c-nombre').value,email:document.getElementById('c-email').value,telefono:document.getElementById('c-telefono').value,direccion:document.getElementById('c-direccion').value};
   if(!b.nombre)return alert('El nombre es obligatorio');
   const editando=clienteEditandoId!==null;
   const url=editando?(API+'/clientes/'+clienteEditandoId):(API+'/clientes');
@@ -1274,6 +1300,7 @@ async function agregarCliente(){
     document.getElementById('c-nombre').value='';
     document.getElementById('c-email').value='';
     document.getElementById('c-telefono').value='';
+    document.getElementById('c-direccion').value='';
   }
   alert(editando?'✓ Cliente actualizado':'✓ Cliente registrado');
   loadClientes();
