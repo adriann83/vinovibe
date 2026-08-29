@@ -253,12 +253,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div class="form-grid">
       <div class="form-group"><label>Cliente</label><input id="p-cliente" placeholder="Nombre del cliente"></div>
       <div class="form-group"><label>Tipo</label><select id="p-tipo"><option value="retiro">🏪 Click & Collect</option><option value="envio">🚚 Envío</option></select></div>
+      <div class="form-group"><label>Teléfono (opcional)</label><input id="p-telefono" placeholder="Ej: 3411234567"></div>
+      <div class="form-group"><label>Dirección (opcional)</label><input id="p-direccion" placeholder="Solo si es envío"></div>
       <div class="form-group full"><label>Vino</label><select id="p-vino-sel"></select></div>
       <div class="form-group"><label>Cantidad</label><input id="p-cantidad" type="number" value="1" min="1"></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-gold" onclick="agregarItemPedido()">+ Agregar vino</button>
       <button class="btn btn-primary" onclick="crearPedido()">Confirmar pedido</button>
+      <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="registrarClienteDesdePedido({nombre:document.getElementById('p-cliente').value,telefono:document.getElementById('p-telefono').value,direccion:document.getElementById('p-direccion').value})">＋ Registrar cliente</button>
     </div>
     <div id="items-pedido" style="margin-top:10px;font-size:12px;color:var(--smoke)"></div>
   </div>
@@ -1238,11 +1241,15 @@ function agregarItemPedido(){
 async function crearPedido(){
   const cliente=document.getElementById('p-cliente').value;
   const tipo=document.getElementById('p-tipo').value;
+  const telefono=document.getElementById('p-telefono').value;
+  const direccion=document.getElementById('p-direccion').value;
   if(!cliente||!itemsPedido.length)return alert('Completá cliente y agregá al menos un vino');
   const total=itemsPedido.reduce((s,x)=>s+x.precio*x.cantidad,0);
-  await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,items:itemsPedido,total,tipo})});
+  await fetch(API+'/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cliente_nombre:cliente,telefono,direccion,items:itemsPedido,total,tipo})});
   itemsPedido=[];
   document.getElementById('p-cliente').value='';
+  document.getElementById('p-telefono').value='';
+  document.getElementById('p-direccion').value='';
   document.getElementById('items-pedido').innerHTML='';
   alert('✓ Pedido creado');
   loadPedidos();
