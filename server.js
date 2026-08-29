@@ -500,16 +500,12 @@ app.post('/api/sommelier', limiteSommelier, async (req, res) => {
       `- id:${v.id} | ${v.nombre} (${v.bodega}) | Varietal: ${v.varietal || '-'} | Tanino:${v.tanino} Acidez:${v.acidez} Cuerpo:${v.cuerpo} Dulzor:${v.dulzor} | Stock:${v.stock} | Notas: ${v.descripcion || 'sin notas'}`
     ).join('\n');
 
-    const prompt = `Sos un sommelier experto ayudando a elegir el mejor vino de este catálogo específico para un cliente.
+    // Bloque ESTÁTICO (catálogo + instrucciones): no cambia entre consultas, se cachea.
+    // Las consultas siguientes (mientras el catálogo no cambie) pagan solo ~10% de esta parte.
+    const systemEstatico = `Sos un sommelier experto ayudando a elegir el mejor vino de este catálogo específico para un cliente.
 
 CATÁLOGO DISPONIBLE:
 ${catalogoTexto}
-
-PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
-
-${preferenciasGenerales ? `PREFERENCIA GENERAL DEL CLIENTE (lo que suele tomar habitualmente, NO es el pedido de hoy): ${preferenciasGenerales}` : ''}
-
-${contexto ? `LO QUE PIDE EL CLIENTE HOY, EN ESTE MOMENTO: "${contexto}"` : 'El cliente no dio un pedido específico para hoy, recomendá en base a su perfil de sabor y preferencia general.'}
 
 Elegí hasta 3 vinos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado. IMPORTANTE: si "lo que pide el cliente hoy" menciona una comida o un maridaje concreto, ese pedido puntual tiene PRIORIDAD ABSOLUTA por sobre el perfil numérico y por sobre la preferencia general — la preferencia general solo sirve de referencia cuando el cliente no especificó nada puntual hoy. Por ejemplo, si el cliente suele tomar tintos pero hoy pide algo para acompañar un pescado, recomendá lo que mejor acompañe el pescado, no un tinto por costumbre. Si el catálogo tiene menos de 3 vinos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
@@ -518,10 +514,18 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
 
 El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y breves (por ejemplo ["Asado", "Quesos duros", "Picadas"]), no una sola frase larga.`;
 
+    // Bloque DINÁMICO (perfil + pregunta puntual): cambia en cada consulta, va sin cachear.
+    const mensajeDinamico = `PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
+
+${preferenciasGenerales ? `PREFERENCIA GENERAL DEL CLIENTE (lo que suele tomar habitualmente, NO es el pedido de hoy): ${preferenciasGenerales}` : ''}
+
+${contexto ? `LO QUE PIDE EL CLIENTE HOY, EN ESTE MOMENTO: "${contexto}"` : 'El cliente no dio un pedido específico para hoy, recomendá en base a su perfil de sabor y preferencia general.'}`;
+
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      messages: [{ role: 'user', content: prompt }]
+      system: [{ type: 'text', text: systemEstatico, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: mensajeDinamico }]
     });
 
     const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
@@ -589,22 +593,23 @@ app.post('/api/sommelier-productos', limiteSommelier, async (req, res) => {
       `- id:${p.id} | ${p.nombre} (${p.marca || 'sin marca'}) | Categoría: ${p.categoria || '-'} | Stock:${p.stock} | Descripción: ${p.descripcion || 'sin notas'}`
     ).join('\n');
 
-    const prompt = `Sos un sommelier experto en aceites de oliva, vinagres balsámicos y productos gourmet, ayudando a elegir el mejor producto de este catálogo específico para un cliente.
+    const systemEstatico = `Sos un sommelier experto en aceites de oliva, vinagres balsámicos y productos gourmet, ayudando a elegir el mejor producto de este catálogo específico para un cliente.
 
 CATÁLOGO DISPONIBLE:
 ${catalogoTexto}
-
-${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá los productos más versátiles o destacados del catálogo.'}
 
 Elegí hasta 3 productos ADECUADOS de la lista de arriba (solo de esa lista, usando su id exacto), ordenados del más al menos recomendado, considerando lo que el cliente pidió (plato, uso, tipo de sabor buscado, etc.) y las notas de cata/descripción de cada producto. Si el catálogo tiene menos de 3 productos que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
 Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
 [{"id": <id del producto>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué este producto es una buena opción, mencionando notas de sabor reales del producto>", "uso_sugerido": "<breve sugerencia de uso o maridaje, 3-6 palabras>"}]`;
 
+    const mensajeDinamico = contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá los productos más versátiles o destacados del catálogo.';
+
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      messages: [{ role: 'user', content: prompt }]
+      system: [{ type: 'text', text: systemEstatico, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: mensajeDinamico }]
     });
 
     const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
@@ -672,22 +677,23 @@ app.post('/api/bartender', limiteSommelier, async (req, res) => {
       `- id:${b.id} | ${b.nombre} (${b.marca || 'sin marca'}) | Categoría: ${b.categoria || '-'} | Stock:${b.stock} | Notas: ${b.descripcion || 'sin notas'}`
     ).join('\n');
 
-    const prompt = `Sos un bartender experto ayudando a elegir la mejor bebida de esta barra específica para un cliente.
+    const systemEstatico = `Sos un bartender experto ayudando a elegir la mejor bebida de esta barra específica para un cliente.
 
 BARRA DISPONIBLE:
 ${catalogoTexto}
-
-${contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá las bebidas más versátiles o destacadas de la barra.'}
 
 Elegí hasta 3 bebidas ADECUADAS de la lista de arriba (solo de esa lista, usando su id exacto), ordenadas de la más a la menos recomendada, considerando el momento/ocasión que describió el cliente (para tomar solo, para compartir, para un trago largo, etc.) y las notas reales de cada bebida. Si el cliente pide un trago mezclado (ej. "gin tonic", "fernet con cola"), recomendá la bebida base de la barra que mejor sirva para prepararlo, aclarando en la razón que el resto de los ingredientes (hielo, gaseosa, limón, etc.) no forman parte del catálogo. Si la barra tiene menos de 3 bebidas que realmente encajen bien, devolvé menos (no fuerces opciones malas).
 
 Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, con este formato exacto:
 [{"id": <id de la bebida>, "match_porcentaje": <número entre 60 y 99>, "razon": "<2-3 frases explicando por qué esta bebida es una buena opción, mencionando notas reales de la bebida>", "uso_sugerido": "<breve sugerencia de cómo tomarla, 3-6 palabras>"}]`;
 
+    const mensajeDinamico = contexto ? `LO QUE PIDE EL CLIENTE: "${contexto}"` : 'El cliente no dio un contexto específico, recomendá las bebidas más versátiles o destacadas de la barra.';
+
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      messages: [{ role: 'user', content: prompt }]
+      system: [{ type: 'text', text: systemEstatico, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: mensajeDinamico }]
     });
 
     const textoRespuesta = msg.content.find(b => b.type === 'text')?.text || '[]';
