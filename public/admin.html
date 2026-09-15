@@ -100,6 +100,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.taste-bars{grid-template-columns:1fr}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -153,6 +154,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="page-vinos" class="page">
   <div class="page-title">Catálogo de Vinos</div>
   <div class="page-sub">Gestioná tu inventario</div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">📊 Carga masiva por Excel</div>
+    <div style="font-size:12px;color:var(--smoke);margin-bottom:14px">Cargá varios vinos de una, o actualizá precios y stock de los que ya tenés — sin tipear uno por uno.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="descargarPlantillaVinos()">⬇️ Descargar plantilla</button>
+      <label class="btn btn-gold btn-sm" style="cursor:pointer">＋ Importar vinos nuevos<input type="file" id="import-vinos-nuevos" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarVinosNuevos(this)"></label>
+      <label class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);cursor:pointer">💲 Actualizar precios/stock<input type="file" id="import-vinos-precios" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarPreciosStock(this)"></label>
+    </div>
+    <div id="import-vinos-progreso" style="display:none;font-size:12px;color:var(--smoke);margin-top:8px"></div>
+    <div id="import-vinos-resultado" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:13px"></div>
+  </div>
+
   <div class="card">
     <div id="v-form-titulo" style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar vino</div>
     <div class="form-grid">
@@ -902,6 +916,160 @@ function eliminarCata(id){
 // ── VINOTECA ──
 function parsearItems(items){
   try{const a=typeof items==='string'?JSON.parse(items):items;return Array.isArray(a)?a.map(i=>`${i.nombre}×${i.cantidad}`).join(', '):'-';}catch{return'-';}
+}
+
+// ── CARGA MASIVA POR EXCEL ──────────────────────────────────────────
+
+function descargarPlantillaVinos(){
+  const headers=['Nombre','Bodega','Región','Varietal','Añada','Precio','Stock','Tanino (1-10)','Acidez (1-10)','Cuerpo (1-10)','Dulzor (1-10)','Descripción','URL Foto (opcional)'];
+  const ejemplo=['Malbec Reserva','Achaval Ferrer','Mendoza','Malbec','2021','9500','12','7','5','8','2','Notas de frutos negros y especias, taninos suaves',''];
+  const filas=[headers,ejemplo];
+  const csv='\uFEFF'+filas.map(fila=>fila.map(v=>{
+    const s=String(v??'');
+    return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='plantilla_vinos_vinovibe.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Normaliza el nombre de una columna (sin tildes, minúscula, sin espacios) para matchear
+// variantes de encabezado sin que el cliente tenga que usar el nombre exacto de la plantilla.
+function normalizarHeader(h){
+  return String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+}
+
+const MAPEO_COLUMNAS_VINO={
+  nombre:'nombre', nombredelvino:'nombre',
+  bodega:'bodega',
+  region:'region', regionterroir:'region',
+  varietal:'varietal', lineavarietal:'varietal', linea:'varietal', cepa:'varietal',
+  anada:'anada', cosecha:'anada', cosechaano:'anada', ano:'anada',
+  precio:'precio',
+  stock:'stock',
+  tanino110:'tanino', tanino:'tanino',
+  acidez110:'acidez', acidez:'acidez',
+  cuerpo110:'cuerpo', cuerpo:'cuerpo',
+  dulzor110:'dulzor', dulzor:'dulzor',
+  descripcion:'descripcion', notasdecata:'descripcion', notas:'descripcion',
+  urlfoto:'foto_url', urlfotoopcional:'foto_url', foto:'foto_url'
+};
+
+function leerFilasExcel(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'binary'});
+        const hoja=wb.Sheets[wb.SheetNames[0]];
+        const filasRaw=XLSX.utils.sheet_to_json(hoja,{defval:''});
+        const filas=filasRaw.map(fila=>{
+          const obj={};
+          Object.keys(fila).forEach(k=>{
+            const campo=MAPEO_COLUMNAS_VINO[normalizarHeader(k)];
+            if(campo)obj[campo]=fila[k];
+          });
+          return obj;
+        }).filter(f=>f.nombre);
+        resolve(filas);
+      }catch(err){reject(err);}
+    };
+    reader.onerror=reject;
+    reader.readAsBinaryString(file);
+  });
+}
+
+async function importarVinosNuevos(input){
+  const file=input.files[0];
+  if(!file)return;
+  const progreso=document.getElementById('import-vinos-progreso');
+  const resultado=document.getElementById('import-vinos-resultado');
+  resultado.style.display='none';
+  progreso.style.display='block';
+  progreso.textContent='Leyendo archivo...';
+  try{
+    const filas=await leerFilasExcel(file);
+    if(!filas.length){
+      progreso.style.display='none';
+      resultado.style.display='block';
+      resultado.style.background='#FDE8E8';resultado.style.color='#C0392B';
+      resultado.textContent='No se encontraron filas con nombre en el archivo. Revisá que uses la plantilla o que la columna "Nombre" esté presente.';
+      return;
+    }
+    let ok=0,error=0;
+    const errores=[];
+    for(let i=0;i<filas.length;i++){
+      const f=filas[i];
+      progreso.textContent=`Importando ${i+1}/${filas.length}: ${f.nombre}...`;
+      const body={
+        nombre:f.nombre, bodega:f.bodega||'', region:f.region||'', varietal:f.varietal||'',
+        anada:f.anada?parseInt(f.anada):null, precio:f.precio?parseFloat(f.precio):0,
+        stock:f.stock?parseInt(f.stock):0, tanino:f.tanino?parseInt(f.tanino):5,
+        acidez:f.acidez?parseInt(f.acidez):5, cuerpo:f.cuerpo?parseInt(f.cuerpo):5,
+        dulzor:f.dulzor?parseInt(f.dulzor):2, descripcion:f.descripcion||'', foto_url:f.foto_url||''
+      };
+      try{
+        const r=await fetch(API+'/vinos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok)ok++;else{error++;errores.push(f.nombre);}
+      }catch(e){error++;errores.push(f.nombre);}
+    }
+    progreso.style.display='none';
+    resultado.style.display='block';
+    resultado.style.background=error?'#FFF3DC':'#EBF5EB';
+    resultado.style.color=error?'#8A6416':'#256B25';
+    resultado.innerHTML=`✓ ${ok} vino${ok===1?'':'s'} importado${ok===1?'':'s'} correctamente.`+(error?`<br>⚠️ ${error} con error: ${errores.join(', ')}`:'');
+    input.value='';
+    loadVinos();
+  }catch(err){
+    progreso.style.display='none';
+    resultado.style.display='block';
+    resultado.style.background='#FDE8E8';resultado.style.color='#C0392B';
+    resultado.textContent='No pudimos leer el archivo. Confirmá que sea un Excel (.xlsx) o CSV válido.';
+  }
+}
+
+async function importarPreciosStock(input){
+  const file=input.files[0];
+  if(!file)return;
+  const progreso=document.getElementById('import-vinos-progreso');
+  const resultado=document.getElementById('import-vinos-resultado');
+  resultado.style.display='none';
+  progreso.style.display='block';
+  progreso.textContent='Leyendo archivo...';
+  try{
+    const filas=await leerFilasExcel(file);
+    let actualizados=0;
+    const noEncontrados=[];
+    for(let i=0;i<filas.length;i++){
+      const f=filas[i];
+      progreso.textContent=`Actualizando ${i+1}/${filas.length}: ${f.nombre}...`;
+      const body={
+        nombre:f.nombre, bodega:f.bodega||undefined,
+        precio:f.precio?parseFloat(f.precio):undefined,
+        stock:f.stock!==''&&f.stock!==undefined?parseInt(f.stock):undefined
+      };
+      try{
+        const r=await fetch(API+'/vinos/actualizar-precio-stock',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const d=await r.json();
+        if(d.encontrado)actualizados++;else noEncontrados.push(f.nombre);
+      }catch(e){noEncontrados.push(f.nombre);}
+    }
+    progreso.style.display='none';
+    resultado.style.display='block';
+    resultado.style.background=noEncontrados.length?'#FFF3DC':'#EBF5EB';
+    resultado.style.color=noEncontrados.length?'#8A6416':'#256B25';
+    resultado.innerHTML=`✓ ${actualizados} vino${actualizados===1?'':'s'} actualizado${actualizados===1?'':'s'}.`+(noEncontrados.length?`<br>⚠️ No se encontraron (revisá el nombre exacto): ${noEncontrados.join(', ')}`:'');
+    input.value='';
+    loadVinos();
+  }catch(err){
+    progreso.style.display='none';
+    resultado.style.display='block';
+    resultado.style.background='#FDE8E8';resultado.style.color='#C0392B';
+    resultado.textContent='No pudimos leer el archivo. Confirmá que sea un Excel (.xlsx) o CSV válido.';
+  }
 }
 
 async function loadDashboard(){

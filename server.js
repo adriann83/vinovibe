@@ -214,6 +214,29 @@ app.post('/api/vinos', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Actualiza SOLO precio y stock de un vino, buscándolo por nombre+bodega (para la re-importación de listas de precios).
+// OJO: esta ruta tiene que ir antes de PUT /api/vinos/:id, si no Express interpretaría
+// "actualizar-precio-stock" como si fuera el :id.
+app.put('/api/vinos/actualizar-precio-stock', requireAuth, async (req, res) => {
+  const { nombre, bodega, precio, stock } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Falta el nombre' });
+  try {
+    const existente = await db.execute({
+      sql: bodega
+        ? 'SELECT id FROM vinos WHERE LOWER(nombre)=LOWER(?) AND LOWER(bodega)=LOWER(?)'
+        : 'SELECT id FROM vinos WHERE LOWER(nombre)=LOWER(?)',
+      args: bodega ? [nombre, bodega] : [nombre]
+    });
+    if (!existente.rows.length) return res.json({ encontrado: false });
+    const id = existente.rows[0].id;
+    await db.execute({
+      sql: 'UPDATE vinos SET precio=COALESCE(?,precio), stock=COALESCE(?,stock) WHERE id=?',
+      args: [precio ?? null, stock ?? null, id]
+    });
+    res.json({ encontrado: true, id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.delete('/api/vinos/:id', requireAuth, async (req, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM vinos WHERE id=?', args: [req.params.id] });
