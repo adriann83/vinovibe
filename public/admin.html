@@ -926,8 +926,8 @@ function descargarPlantillaVinos(){
   const filas=[headers,ejemplo];
   const csv='\uFEFF'+filas.map(fila=>fila.map(v=>{
     const s=String(v??'');
-    return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
-  }).join(',')).join('\r\n');
+    return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(';')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -963,7 +963,18 @@ function leerFilasExcel(file){
     const reader=new FileReader();
     reader.onload=(e)=>{
       try{
-        const wb=XLSX.read(e.target.result,{type:'binary'});
+        const contenido=e.target.result;
+        const esCSV=/\.csv$/i.test(file.name);
+        let opciones={type:'binary'};
+        if(esCSV){
+          // Excel en configuración regional Argentina exporta/espera ";" como separador de CSV.
+          // Detectamos automáticamente si el archivo usa ";" o "," mirando la primera línea.
+          const primeraLinea=contenido.split(/\r?\n/)[0]||'';
+          const cantPuntoYComa=(primeraLinea.match(/;/g)||[]).length;
+          const cantComa=(primeraLinea.match(/,/g)||[]).length;
+          opciones.FS=cantPuntoYComa>cantComa?';':',';
+        }
+        const wb=XLSX.read(contenido,opciones);
         const hoja=wb.Sheets[wb.SheetNames[0]];
         const filasRaw=XLSX.utils.sheet_to_json(hoja,{defval:''});
         const filas=filasRaw.map(fila=>{
