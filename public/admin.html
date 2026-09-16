@@ -590,8 +590,14 @@ function setMode(modo,btn){
   renderTabs(modo);
 }
 
+let tipoNegocio='vinoteca';
+
 function renderTabs(modo){
-  const tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
+  let tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
+  if(tipoNegocio==='restaurante'){
+    if(modo==='vinoteca')tabs=tabs.filter(t=>t.id!=='pedidos'&&t.id!=='clientes');
+    else tabs=tabs.filter(t=>t.id!=='mis-pedidos');
+  }
   const bar=document.getElementById('tabs-bar');
   bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showPage('${t.id}',this)">${t.label}</button>`).join('');
   showPage(tabs[0].id,bar.querySelector('.tab-btn'));
@@ -1729,9 +1735,13 @@ async function cerrarSesion(){
   location.reload();
 }
 
-function mostrarApp(){
+async function mostrarApp(){
   document.getElementById('login-gate').style.display='none';
   document.getElementById('app-wrap').style.display='block';
+  try{
+    const cfg=await fetch(API+'/config').then(r=>r.json());
+    tipoNegocio=cfg.tipo_negocio||'vinoteca';
+  }catch(e){}
   renderTabs('vinoteca');
 }
 

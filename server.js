@@ -159,7 +159,8 @@ app.get('/api/config', (req, res) => {
     whatsapp: process.env.VINOTECA_WHATSAPP || null,
     alias_transferencia: process.env.VINOTECA_ALIAS || null,
     cbu_transferencia: process.env.VINOTECA_CBU || null,
-    titular_transferencia: process.env.VINOTECA_TITULAR || null
+    titular_transferencia: process.env.VINOTECA_TITULAR || null,
+    tipo_negocio: process.env.TIPO_NEGOCIO || 'vinoteca'
   });
 });
 
