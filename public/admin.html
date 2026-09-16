@@ -1072,25 +1072,32 @@ async function importarPreciosStock(input){
     const filas=await leerFilasExcel(file);
     let actualizados=0;
     const noEncontrados=[];
+    const ambiguos=[];
     for(let i=0;i<filas.length;i++){
       const f=filas[i];
       progreso.textContent=`Actualizando ${i+1}/${filas.length}: ${f.nombre}...`;
       const body={
-        nombre:f.nombre, bodega:f.bodega||undefined,
+        nombre:f.nombre, bodega:f.bodega||undefined, varietal:f.varietal||undefined,
         precio:f.precio?parseFloat(f.precio):undefined,
         stock:f.stock!==''&&f.stock!==undefined?parseInt(f.stock):undefined
       };
       try{
         const r=await fetch(API+'/vinos/actualizar-precio-stock',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const d=await r.json();
-        if(d.encontrado)actualizados++;else noEncontrados.push(f.nombre);
+        if(d.encontrado)actualizados++;
+        else if(d.ambiguo)ambiguos.push(f.nombre);
+        else noEncontrados.push(f.nombre);
       }catch(e){noEncontrados.push(f.nombre);}
     }
     progreso.style.display='none';
     resultado.style.display='block';
-    resultado.style.background=noEncontrados.length?'#FFF3DC':'#EBF5EB';
-    resultado.style.color=noEncontrados.length?'#8A6416':'#256B25';
-    resultado.innerHTML=`✓ ${actualizados} vino${actualizados===1?'':'s'} actualizado${actualizados===1?'':'s'}.`+(noEncontrados.length?`<br>⚠️ No se encontraron (revisá el nombre exacto): ${noEncontrados.join(', ')}`:'');
+    const huboProblemas=noEncontrados.length||ambiguos.length;
+    resultado.style.background=huboProblemas?'#FFF3DC':'#EBF5EB';
+    resultado.style.color=huboProblemas?'#8A6416':'#256B25';
+    let html=`✓ ${actualizados} vino${actualizados===1?'':'s'} actualizado${actualizados===1?'':'s'}.`;
+    if(ambiguos.length)html+=`<br>⚠️ Hay más de un vino con ese Nombre/Bodega, agregá también la columna "Varietal" en el Excel para diferenciarlos: ${ambiguos.join(', ')}`;
+    if(noEncontrados.length)html+=`<br>⚠️ No se encontraron (revisá el nombre exacto): ${noEncontrados.join(', ')}`;
+    resultado.innerHTML=html;
     input.value='';
     loadVinos();
   }catch(err){
