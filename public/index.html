@@ -422,6 +422,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <input id="beb-buscar" placeholder="🔍 Buscar bebida o marca..." style="flex:1;min-width:200px" oninput="filtrarBebidasCatalogo()">
+    <select id="beb-subtipo" onchange="filtrarBebidasCatalogo()">
+      <option value="">Todas</option>
+      <option value="sin_alcohol">🥤 Sin alcohol</option>
+      <option value="con_alcohol">🥃 Con alcohol</option>
+      <option value="trago">🍹 Tragos</option>
+    </select>
     <select id="beb-categoria" onchange="filtrarBebidasCatalogo()">
       <option value="">Todas las categorías</option>
       <option value="Whisky">Whisky</option>
@@ -555,7 +561,7 @@ const tabsVinoteca=[
 const tabsConsumidor=[
   {id:'mi-perfil',label:'👤 Mi Perfil'},
   {id:'recomendaciones',label:'✦ Recomendaciones'},
-  {id:'catalogo',label:'🍷 Catálogo'},
+  {id:'catalogo',label:'🍷 Vinos'},
   {id:'productos-catalogo',label:'🫒 Aceites y más'},
   {id:'bebidas-catalogo',label:'🍸 Otras Bebidas'},
   {id:'menu-platos',label:'🍽️ Menú'},
@@ -1040,12 +1046,14 @@ async function loadBebidasCatalogo(){
 
 function filtrarBebidasCatalogo(){
   const buscar=document.getElementById('beb-buscar').value.toLowerCase();
+  const subtipo=document.getElementById('beb-subtipo').value;
   const categoria=document.getElementById('beb-categoria').value;
   const precioMin=parseFloat(document.getElementById('beb-precio-min').value)||0;
   const precioMaxInput=document.getElementById('beb-precio-max').value;
   const precioMax=precioMaxInput?parseFloat(precioMaxInput):Infinity;
   renderProductosCatalogo(todosLosProductosBebida.filter(p=>
     (!buscar||p.nombre.toLowerCase().includes(buscar)||(p.marca||'').toLowerCase().includes(buscar))
+    &&(!subtipo||p.subtipo===subtipo)
     &&(!categoria||p.categoria===categoria)
     &&(p.precio>=precioMin&&p.precio<=precioMax)
   ),'bebidas-catalogo-grid');

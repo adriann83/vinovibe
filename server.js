@@ -105,6 +105,7 @@ async function initDb() {
     'ALTER TABLE pedidos ADD COLUMN telefono TEXT',
     'ALTER TABLE pedidos ADD COLUMN direccion TEXT',
     'ALTER TABLE productos ADD COLUMN tipo TEXT DEFAULT \'gourmet\'',
+    'ALTER TABLE productos ADD COLUMN subtipo TEXT',
     'ALTER TABLE clientes ADD COLUMN direccion TEXT'
   ]) {
     try { await db.execute(alter); } catch (e) { /* ya existe, la ignoramos */ }
@@ -283,24 +284,24 @@ app.get('/api/productos', async (req, res) => {
 });
 
 app.post('/api/productos', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo, subtipo } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     const result = await db.execute({
-      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion,foto_url,ficha_pdf_url,tipo) VALUES (?,?,?,?,?,?,?,?,?)`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet']
+      sql: `INSERT INTO productos (nombre,categoria,marca,precio,stock,descripcion,foto_url,ficha_pdf_url,tipo,subtipo) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet', subtipo || null]
     });
     res.json({ id: Number(result.lastInsertRowid) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/productos/:id', requireAuth, async (req, res) => {
-  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo } = req.body;
+  const { nombre, categoria, marca, precio, stock, descripcion, foto_url, ficha_pdf_url, tipo, subtipo } = req.body;
   if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
   try {
     await db.execute({
-      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=?,foto_url=?,ficha_pdf_url=?,tipo=? WHERE id=?`,
-      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet', req.params.id]
+      sql: `UPDATE productos SET nombre=?,categoria=?,marca=?,precio=?,stock=?,descripcion=?,foto_url=?,ficha_pdf_url=?,tipo=?,subtipo=? WHERE id=?`,
+      args: [nombre, categoria, marca || null, precio || 0, stock || 0, descripcion || null, foto_url || null, ficha_pdf_url || null, tipo || 'gourmet', subtipo || null, req.params.id]
     });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
