@@ -160,6 +160,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div style="font-size:12px;color:var(--smoke);margin-bottom:14px">Cargá varios vinos de una, o actualizá precios y stock de los que ya tenés — sin tipear uno por uno.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="descargarPlantillaVinos()">⬇️ Descargar plantilla</button>
+      <button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="exportarCatalogoVinos()">📋 Exportar catálogo actual</button>
       <label class="btn btn-gold btn-sm" style="cursor:pointer">＋ Importar vinos nuevos<input type="file" id="import-vinos-nuevos" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarVinosNuevos(this)"></label>
       <label class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);cursor:pointer">💲 Actualizar precios/stock<input type="file" id="import-vinos-precios" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarPreciosStock(this)"></label>
     </div>
@@ -919,6 +920,22 @@ function parsearItems(items){
 }
 
 // ── CARGA MASIVA POR EXCEL ──────────────────────────────────────────
+
+function exportarCatalogoVinos(){
+  if(!vinosData.length)return alert('Todavía no hay vinos cargados en el catálogo');
+  const headers=['Nombre','Bodega','Región','Varietal','Añada','Precio','Stock','Tanino (1-10)','Acidez (1-10)','Cuerpo (1-10)','Dulzor (1-10)','Descripción'];
+  const filas=[headers,...vinosData.map(v=>[v.nombre,v.bodega,v.region||'',v.varietal||'',v.anada||'',v.precio,v.stock,v.tanino,v.acidez,v.cuerpo,v.dulzor,v.descripcion||''])];
+  const csv='\uFEFF'+filas.map(fila=>fila.map(v=>{
+    const s=String(v??'');
+    return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='catalogo_actual_vinovibe.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 function descargarPlantillaVinos(){
   const headers=['Nombre','Bodega','Región','Varietal','Añada','Precio','Stock','Tanino (1-10)','Acidez (1-10)','Cuerpo (1-10)','Dulzor (1-10)','Descripción','URL Foto (opcional)'];
