@@ -95,6 +95,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .vino-card{background:var(--white);border-radius:14px;padding:18px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
 #catalogo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 #productos-catalogo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+#menu-platos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 .pg-card{background:var(--white);border-radius:10px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
 .pg-photo-wrap{position:relative;width:100%;height:150px;background:linear-gradient(160deg,#4A1620,#2A0E14);padding:10px;box-sizing:border-box}
 .pg-photo{width:100%;height:100%;object-fit:contain;display:block}
@@ -403,6 +404,45 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div id="productos-catalogo-grid"></div>
 </div>
 
+<!-- OTRAS BEBIDAS -->
+<div id="page-bebidas-catalogo" class="page">
+  <div class="page-title">Otras Bebidas</div>
+  <div class="page-sub">Whisky, vermut, aperitivos y más</div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">🍸 Preguntale al Bartender</div>
+    <div style="font-size:12px;color:var(--smoke);margin-bottom:12px">Contanos qué buscás tomar o para qué ocasión, y te recomendamos la mejor opción de nuestra barra.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="bar-pregunta" placeholder="Ej: algo ahumado para tomar solo" style="flex:1;min-width:220px">
+      <button class="btn btn-primary" id="btn-bartender" onclick="preguntarBartender()">Preguntar</button>
+    </div>
+    <div id="loading-bartender" style="display:none;text-align:center;padding:14px;color:var(--smoke);font-size:13px">Pensando la mejor recomendación...</div>
+    <div id="resultado-bartender" style="display:none;margin-top:16px;padding:16px;background:var(--dark);border-radius:10px;color:#fff"></div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <input id="beb-buscar" placeholder="🔍 Buscar bebida o marca..." style="flex:1;min-width:200px" oninput="filtrarBebidasCatalogo()">
+    <select id="beb-categoria" onchange="filtrarBebidasCatalogo()">
+      <option value="">Todas las categorías</option>
+      <option value="Whisky">Whisky</option>
+      <option value="Vermut">Vermut</option>
+      <option value="Aperitivo">Aperitivo</option>
+      <option value="Fernet">Fernet</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <input id="beb-precio-min" type="number" placeholder="Precio mín" style="width:110px" oninput="filtrarBebidasCatalogo()">
+    <input id="beb-precio-max" type="number" placeholder="Precio máx" style="width:110px" oninput="filtrarBebidasCatalogo()">
+  </div>
+  <div id="bebidas-catalogo-grid"></div>
+</div>
+
+<!-- MENÚ (galería de platos, solo para mirar) -->
+<div id="page-menu-platos" class="page">
+  <div class="page-title">Menú</div>
+  <div class="page-sub">Elegí qué vas a comer, y consultá al Sommelier qué tomar con eso</div>
+  <div id="menu-platos-grid"></div>
+</div>
+
 <!-- MIS PEDIDOS -->
 <div id="page-mis-pedidos" class="page">
   <div class="page-title">Mi Carrito</div>
@@ -517,6 +557,8 @@ const tabsConsumidor=[
   {id:'recomendaciones',label:'✦ Recomendaciones'},
   {id:'catalogo',label:'🍷 Catálogo'},
   {id:'productos-catalogo',label:'🫒 Aceites y más'},
+  {id:'bebidas-catalogo',label:'🍸 Otras Bebidas'},
+  {id:'menu-platos',label:'🍽️ Menú'},
   {id:'mis-pedidos',label:'🛒 Mi Carrito'},
   {id:'diario',label:'📓 Diario'},
 ];
@@ -557,6 +599,8 @@ function showPage(id,btn){
   if(id==='recomendaciones')loadRecomendaciones();
   if(id==='catalogo')loadCatalogo();
   if(id==='productos-catalogo')loadProductosCatalogo();
+  if(id==='bebidas-catalogo')loadBebidasCatalogo();
+  if(id==='menu-platos')loadMenuPlatos();
   if(id==='mis-pedidos')loadMisPedidos();
   if(id==='diario')loadDiario();
 }
@@ -897,10 +941,11 @@ function mostrarToastCarrito(foto,nombre,cant,precio){
 }
 
 // ── CATÁLOGO PRODUCTOS (aceites, aceitunas, etc.) ──
+let todosLosProductosGourmet=[];
 async function loadProductosCatalogo(){
   const productos=await fetch(API+'/productos').then(r=>r.json());
-  todosLosProductos=productos;
-  renderProductosCatalogo(productos);
+  todosLosProductosGourmet=productos.filter(p=>(p.tipo||'gourmet')==='gourmet');
+  renderProductosCatalogo(todosLosProductosGourmet,'productos-catalogo-grid');
 }
 
 function filtrarProductosCatalogo(){
@@ -909,15 +954,105 @@ function filtrarProductosCatalogo(){
   const precioMin=parseFloat(document.getElementById('prod-precio-min').value)||0;
   const precioMaxInput=document.getElementById('prod-precio-max').value;
   const precioMax=precioMaxInput?parseFloat(precioMaxInput):Infinity;
-  renderProductosCatalogo(todosLosProductos.filter(p=>
+  renderProductosCatalogo(todosLosProductosGourmet.filter(p=>
     (!buscar||p.nombre.toLowerCase().includes(buscar)||(p.marca||'').toLowerCase().includes(buscar))
     &&(!categoria||p.categoria===categoria)
     &&(p.precio>=precioMin&&p.precio<=precioMax)
-  ));
+  ),'productos-catalogo-grid');
 }
 
-function renderProductosCatalogo(productos){
-  const grid=document.getElementById('productos-catalogo-grid');
+let todosLosProductosBebida=[];
+async function preguntarBartender(){
+  const pregunta=document.getElementById('bar-pregunta').value.trim();
+  if(!pregunta)return alert('Contanos qué buscás tomar o para qué ocasión');
+  const btn=document.getElementById('btn-bartender');
+  btn.disabled=true;btn.textContent='Consultando...';
+  document.getElementById('loading-bartender').style.display='block';
+  document.getElementById('resultado-bartender').style.display='none';
+  try{
+    const bebidas=await fetch(API+'/productos').then(r=>r.json()).then(ps=>ps.filter(p=>p.tipo==='bebida'));
+    if(!bebidas.length){alert('Todavía no hay bebidas cargadas en la barra');return;}
+    const r=await fetch(API+'/bartender',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contexto:pregunta,bebidas})});
+    const d=await r.json();
+    if(!r.ok){alert(d.error||'No pudimos consultar al bartender, probá de nuevo en unos minutos.');return;}
+    const recs=Array.isArray(d.recomendaciones)&&d.recomendaciones.length?d.recomendaciones:[d];
+    const top=recs[0];
+    const resto=recs.slice(1);
+
+    const div=document.getElementById('resultado-bartender');
+    div.style.display='block';
+    div.innerHTML=`
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        ${top.foto_url?`<img src="${top.foto_url}" style="width:56px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:56px;height:80px;background:linear-gradient(180deg,#3A2410,#1A0F08);border-radius:8px;flex-shrink:0\\'></div>'">`:`<div style="width:56px;height:80px;background:linear-gradient(180deg,#3A2410,#1A0F08);border-radius:8px;flex-shrink:0"></div>`}
+        <div style="flex:1">
+          <div style="display:inline-block;background:rgba(196,163,90,.2);color:#C4A35A;font-size:11px;font-weight:600;padding:4px 10px;border-radius:50px;margin-bottom:8px">🍸 ${top.match_porcentaje}% match</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px">${top.producto_recomendado}</div>
+          <div style="font-size:11px;color:rgba(245,242,238,.5);margin-bottom:10px">${top.marca||''}</div>
+          <div style="font-size:13px;color:rgba(245,242,238,.75);line-height:1.6;margin-bottom:8px">${top.razon}</div>
+          <div style="font-size:12px;color:#C4A35A;margin-bottom:10px">🥃 ${top.uso_sugerido}</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="font-size:19px;font-weight:600;color:#fff">$${Number(top.precio||0).toLocaleString('es-AR')}</div>
+            <button class="btn btn-sm btn-gold" onclick="verFichaProducto(${top.id})">📋 Ficha</button>
+          </div>
+        </div>
+      </div>
+      ${resto.length?`<div style="border-top:1px solid rgba(255,255,255,.1);padding-top:14px;margin-top:16px">
+        <div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(245,242,238,.4);margin-bottom:10px">Otras opciones</div>
+        ${resto.map(x=>`
+          <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+            ${x.foto_url?`<img src="${x.foto_url}" style="width:40px;height:58px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.outerHTML='<div style=\\'width:40px;height:58px;background:linear-gradient(180deg,#3A2410,#1A0F08);border-radius:6px;flex-shrink:0\\'></div>'">`:`<div style="width:40px;height:58px;background:linear-gradient(180deg,#3A2410,#1A0F08);border-radius:6px;flex-shrink:0"></div>`}
+            <div style="flex:1">
+              <div style="font-size:14px;color:var(--cream)">${x.producto_recomendado} <span style="font-size:10px;color:var(--gold)">${x.match_porcentaje}%</span></div>
+              <div style="font-size:11px;color:rgba(245,242,238,.4)">${x.marca||''}</div>
+            </div>
+          </div>`).join('')}
+      </div>`:''}`;
+  }catch(e){
+    alert('No pudimos consultar al bartender. Probá de nuevo.');
+  }finally{
+    document.getElementById('loading-bartender').style.display='none';
+    btn.disabled=false;btn.textContent='Preguntar';
+  }
+}
+
+async function loadMenuPlatos(){
+  const platos=await fetch(API+'/platos').then(r=>r.json());
+  const grid=document.getElementById('menu-platos-grid');
+  if(!platos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">Todavía no hay platos cargados en el menú</div>';return;}
+  grid.innerHTML=platos.map(p=>`<div class="pg-card">
+      <div class="pg-photo-wrap">
+        ${p.foto_url?`<img src="${p.foto_url}" class="pg-photo" onerror="this.remove()">`:''}
+      </div>
+      <div class="pg-info">
+        <div class="pg-nombre">${p.nombre}</div>
+        <div class="pg-bodega">${p.categoria||''}</div>
+        ${p.descripcion?`<div style="font-size:11px;color:var(--smoke);margin-bottom:6px">${p.descripcion}</div>`:''}
+        ${p.precio?`<div class="pg-precio">$${Number(p.precio).toLocaleString('es-AR')}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function loadBebidasCatalogo(){
+  const productos=await fetch(API+'/productos').then(r=>r.json());
+  todosLosProductosBebida=productos.filter(p=>p.tipo==='bebida');
+  renderProductosCatalogo(todosLosProductosBebida,'bebidas-catalogo-grid');
+}
+
+function filtrarBebidasCatalogo(){
+  const buscar=document.getElementById('beb-buscar').value.toLowerCase();
+  const categoria=document.getElementById('beb-categoria').value;
+  const precioMin=parseFloat(document.getElementById('beb-precio-min').value)||0;
+  const precioMaxInput=document.getElementById('beb-precio-max').value;
+  const precioMax=precioMaxInput?parseFloat(precioMaxInput):Infinity;
+  renderProductosCatalogo(todosLosProductosBebida.filter(p=>
+    (!buscar||p.nombre.toLowerCase().includes(buscar)||(p.marca||'').toLowerCase().includes(buscar))
+    &&(!categoria||p.categoria===categoria)
+    &&(p.precio>=precioMin&&p.precio<=precioMax)
+  ),'bebidas-catalogo-grid');
+}
+
+function renderProductosCatalogo(productos,gridId){
+  const grid=document.getElementById(gridId||'productos-catalogo-grid');
   if(!productos.length){grid.innerHTML='<div class="card" style="text-align:center;color:var(--smoke)">No se encontraron productos</div>';return;}
   grid.innerHTML=productos.map(p=>{
     const sinStock=p.stock===0;

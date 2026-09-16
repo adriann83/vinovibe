@@ -88,6 +88,12 @@ async function initDb() {
       tipo TEXT,
       fecha DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS platos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL, categoria TEXT,
+      descripcion TEXT, precio REAL, foto_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Migración: agregar columna foto_url si todavía no existe (para bases ya creadas antes)
@@ -303,6 +309,46 @@ app.put('/api/productos/:id', requireAuth, async (req, res) => {
 app.delete('/api/productos/:id', requireAuth, async (req, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM productos WHERE id=?', args: [req.params.id] });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── PLATOS (galería de menú, para la versión restaurante) ───────────────────
+
+app.get('/api/platos', async (req, res) => {
+  try {
+    const result = await db.execute('SELECT * FROM platos ORDER BY categoria, nombre');
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/platos', requireAuth, async (req, res) => {
+  const { nombre, categoria, descripcion, precio, foto_url } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  try {
+    const result = await db.execute({
+      sql: `INSERT INTO platos (nombre,categoria,descripcion,precio,foto_url) VALUES (?,?,?,?,?)`,
+      args: [nombre, categoria || null, descripcion || null, precio || null, foto_url || null]
+    });
+    res.json({ id: Number(result.lastInsertRowid) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/platos/:id', requireAuth, async (req, res) => {
+  const { nombre, categoria, descripcion, precio, foto_url } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  try {
+    await db.execute({
+      sql: `UPDATE platos SET nombre=?,categoria=?,descripcion=?,precio=?,foto_url=? WHERE id=?`,
+      args: [nombre, categoria || null, descripcion || null, precio || null, foto_url || null, req.params.id]
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/platos/:id', requireAuth, async (req, res) => {
+  try {
+    await db.execute({ sql: 'DELETE FROM platos WHERE id=?', args: [req.params.id] });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

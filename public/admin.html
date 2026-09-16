@@ -259,6 +259,44 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </table></div>
 </div>
 
+<!-- MENÚ (platos, para la versión restaurante) -->
+<div id="page-platos" class="page">
+  <div class="page-title">Menú</div>
+  <div class="page-sub">Fotos de los platos, para que el comensal los vea antes de preguntarle al Sommelier</div>
+  <div class="card">
+    <div id="pl-form-titulo" style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:14px;color:var(--dark)">Agregar plato</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre</label><input id="pl-nombre" placeholder="Bife de chorizo"></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="pl-categoria">
+          <option value="Entrada">Entrada</option>
+          <option value="Principal">Principal</option>
+          <option value="Postre">Postre</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Precio (opcional)</label><input id="pl-precio" type="number" placeholder="12000"></div>
+      <div class="form-group full"><label>Descripción (opcional)</label><input id="pl-descripcion" placeholder="Con papas rústicas y ensalada"></div>
+      <div class="form-group full">
+        <label>Foto del plato</label>
+        <input type="hidden" id="pl-foto">
+        <input type="file" id="pl-foto-file" accept="image/*" onchange="subirFoto('pl-foto-file','pl-foto','pl-foto-preview','pl-foto-status')">
+        <div id="pl-foto-status" style="font-size:12px;color:var(--smoke);margin-top:6px"></div>
+        <img id="pl-foto-preview" style="display:none;margin-top:8px;width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        <button type="button" class="btn btn-sm" style="margin-top:8px;background:var(--cream);border:1px solid var(--border)" onclick="quitarFoto('pl-foto','pl-foto-file','pl-foto-preview','pl-foto-status')">✕ Quitar foto</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-plato" onclick="agregarPlato()">Agregar plato</button>
+    </div>
+    <div id="cancelar-edicion-plato" style="display:none;margin-top:8px"><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border)" onclick="cancelarEdicionPlato()">Cancelar edición</button></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Plato</th><th>Categoría</th><th>Precio</th><th></th></tr></thead>
+    <tbody id="tabla-platos"></tbody>
+  </table></div>
+</div>
+
 <!-- PEDIDOS -->
 <div id="page-pedidos" class="page">
   <div class="page-title">Pedidos</div>
@@ -525,6 +563,7 @@ const tabsVinoteca=[
   {id:'dashboard',label:'📊 Dashboard'},
   {id:'vinos',label:'🍷 Vinos'},
   {id:'productos',label:'🫒 Otros Productos'},
+  {id:'platos',label:'🍽️ Menú'},
   {id:'pedidos',label:'📦 Pedidos'},
   {id:'clientes',label:'👥 Clientes'},
   {id:'sommelier',label:'✦ Sommelier'},
@@ -560,6 +599,7 @@ function showPage(id,btn){
   if(id==='dashboard')loadDashboard();
   if(id==='vinos')loadVinos();
   if(id==='productos')loadProductos();
+  if(id==='platos')loadPlatos();
   if(id==='pedidos')loadPedidos();
   if(id==='clientes')loadClientes();
   if(id==='mi-perfil')loadPerfil();
@@ -1334,6 +1374,73 @@ async function eliminarProducto(id){
   if(!confirm('¿Eliminar?'))return;
   await fetch(API+'/productos/'+id,{method:'DELETE'});
   loadProductos();
+}
+
+// ── PLATOS (galería de menú) ──
+
+let platosData=[];
+let platoEditandoId=null;
+
+async function loadPlatos(){
+  const p=await fetch(API+'/platos').then(r=>r.json());
+  platosData=p;
+  document.getElementById('tabla-platos').innerHTML=p.map(x=>`<tr><td style="display:flex;gap:10px;align-items:flex-start">${x.foto_url?`<img src="${x.foto_url}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`:''}<div><strong>${x.nombre}</strong><div style="font-size:11px;color:var(--smoke)">${x.descripcion||''}</div></div></td><td>${x.categoria||'-'}</td><td>${x.precio?'$'+Number(x.precio).toLocaleString('es-AR'):'-'}</td><td><button class="btn btn-sm" style="background:var(--cream);border:1px solid var(--border);display:block;width:100%;margin-bottom:4px" onclick="editarPlato(${x.id})">✎ Editar</button><button class="btn btn-danger btn-sm" style="display:block;width:100%" onclick="eliminarPlato(${x.id})">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--smoke)">Sin platos cargados</td></tr>';
+}
+
+function editarPlato(id){
+  const p=platosData.find(x=>x.id===id);
+  if(!p)return;
+  platoEditandoId=id;
+  document.getElementById('pl-nombre').value=p.nombre||'';
+  document.getElementById('pl-categoria').value=p.categoria||'Entrada';
+  document.getElementById('pl-precio').value=p.precio||'';
+  document.getElementById('pl-descripcion').value=p.descripcion||'';
+  document.getElementById('pl-foto').value=p.foto_url||'';
+  const plPreview=document.getElementById('pl-foto-preview');
+  if(p.foto_url){plPreview.src=p.foto_url;plPreview.style.display='block';}else{plPreview.style.display='none';}
+  document.getElementById('pl-foto-status').textContent='';
+  document.getElementById('pl-form-titulo').textContent='Editar plato';
+  document.getElementById('btn-plato').textContent='Guardar cambios';
+  document.getElementById('cancelar-edicion-plato').style.display='block';
+  document.getElementById('pl-nombre').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelarEdicionPlato(){
+  platoEditandoId=null;
+  ['pl-nombre','pl-precio','pl-descripcion','pl-foto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pl-categoria').value='Entrada';
+  document.getElementById('pl-foto-file').value='';
+  document.getElementById('pl-foto-preview').style.display='none';
+  document.getElementById('pl-foto-status').textContent='';
+  document.getElementById('pl-form-titulo').textContent='Agregar plato';
+  document.getElementById('btn-plato').textContent='Agregar plato';
+  document.getElementById('cancelar-edicion-plato').style.display='none';
+}
+
+async function agregarPlato(){
+  const b={nombre:document.getElementById('pl-nombre').value,categoria:document.getElementById('pl-categoria').value,precio:document.getElementById('pl-precio').value,descripcion:document.getElementById('pl-descripcion').value,foto_url:document.getElementById('pl-foto').value};
+  if(!b.nombre)return alert('El nombre es obligatorio');
+  const editando=platoEditandoId!==null;
+  const url=editando?(API+'/platos/'+platoEditandoId):(API+'/platos');
+  const method=editando?'PUT':'POST';
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if(r.status===401){alert('Tu sesión venció. Volvé a entrar.');location.reload();return;}
+  if(!r.ok){alert('Error al guardar. Probá de nuevo.');return;}
+  if(editando)cancelarEdicionPlato();
+  else{
+    ['pl-nombre','pl-precio','pl-descripcion','pl-foto'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('pl-categoria').value='Entrada';
+    document.getElementById('pl-foto-file').value='';
+    document.getElementById('pl-foto-preview').style.display='none';
+    document.getElementById('pl-foto-status').textContent='';
+  }
+  loadPlatos();
+}
+
+async function eliminarPlato(id){
+  if(!confirm('¿Eliminar?'))return;
+  await fetch(API+'/platos/'+id,{method:'DELETE'});
+  loadPlatos();
 }
 
 async function registrarClienteDesdePedido(datos){
