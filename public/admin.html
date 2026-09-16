@@ -923,8 +923,9 @@ function parsearItems(items){
 
 function exportarCatalogoVinos(){
   if(!vinosData.length)return alert('Todavía no hay vinos cargados en el catálogo');
+  const limpiar=(s)=>String(s??'').replace(/[\r\n]+/g,' ').trim();
   const headers=['Nombre','Bodega','Región','Varietal','Añada','Precio','Stock','Tanino (1-10)','Acidez (1-10)','Cuerpo (1-10)','Dulzor (1-10)','Descripción'];
-  const filas=[headers,...vinosData.map(v=>[v.nombre,v.bodega,v.region||'',v.varietal||'',v.anada||'',v.precio,v.stock,v.tanino,v.acidez,v.cuerpo,v.dulzor,v.descripcion||''])];
+  const filas=[headers,...vinosData.map(v=>[limpiar(v.nombre),limpiar(v.bodega),limpiar(v.region),limpiar(v.varietal),v.anada||'',v.precio,v.stock,v.tanino,v.acidez,v.cuerpo,v.dulzor,limpiar(v.descripcion)])];
   const csv='\uFEFF'+filas.map(fila=>fila.map(v=>{
     const s=String(v??'');
     return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
