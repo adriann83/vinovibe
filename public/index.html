@@ -117,8 +117,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="nav-logo">Vino<span>Vibe</span></div>
 </nav>
 <div class="hero" style="background:linear-gradient(135deg,#3a1f1f,#1a1410);padding:48px 24px;text-align:center;color:#f5f2ee">
-  <div style="font-family:'Cormorant Garamond',serif;font-size:34px;margin-bottom:8px">Bienvenido a tu vinoteca online</div>
-  <div style="font-size:14px;color:rgba(245,242,238,.7);max-width:480px;margin:0 auto 22px">Descubrí vinos, aceites y más, con recomendaciones pensadas para vos. Pedí online y retirá o recibí en casa.</div>
+  <div id="hero-titulo" style="font-family:'Cormorant Garamond',serif;font-size:34px;margin-bottom:8px">Bienvenido a tu vinoteca online</div>
+  <div id="hero-subtitulo" style="font-size:14px;color:rgba(245,242,238,.7);max-width:480px;margin:0 auto 22px">Descubrí vinos, aceites y más, con recomendaciones pensadas para vos. Pedí online y retirá o recibí en casa.</div>
   <button onclick="irCatalogo()" style="background:#B8860B;color:#1a1410;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer">Ver catálogo</button>
 </div>
 <div class="tabs-bar" id="tabs-bar"></div>
@@ -587,7 +587,7 @@ let tipoNegocio='vinoteca';
 function renderTabs(modo){
   let tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
   if(modo==='consumidor'&&tipoNegocio==='restaurante'){
-    tabs=tabs.filter(t=>t.id!=='mis-pedidos');
+    tabs=tabs.filter(t=>!['mis-pedidos','mi-perfil','productos-catalogo','diario'].includes(t.id));
   }
   const bar=document.getElementById('tabs-bar');
   bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}"${t.id==='mis-pedidos'?' id="tab-mis-pedidos"':''} onclick="showPage('${t.id}',this)">${t.label}${t.id==='mis-pedidos'?' <span id="badge-carrito" style="display:none;background:var(--garnet);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;margin-left:4px"></span>':''}</button>`).join('');
@@ -1593,6 +1593,12 @@ async function iniciarApp(){
   let cfg={};
   try{ cfg=await fetch(API+'/config').then(r=>r.json()); }catch(e){}
   tipoNegocio=cfg.tipo_negocio||'vinoteca';
+  if(tipoNegocio==='restaurante'){
+    const ht=document.getElementById('hero-titulo');
+    const hs=document.getElementById('hero-subtitulo');
+    if(ht)ht.textContent='Bienvenido a nuestra carta de vinos';
+    if(hs)hs.textContent='Descubrí nuestra selección de vinos y bebidas. Nuestro Sommelier IA te ayuda a elegir el maridaje perfecto para tu comida.';
+  }
   renderTabs('consumidor');
   cargarBotonWhatsappFlotante(cfg);
 }
