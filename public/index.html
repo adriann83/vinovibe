@@ -589,6 +589,9 @@ function renderTabs(modo){
   if(modo==='consumidor'&&tipoNegocio==='restaurante'){
     tabs=tabs.filter(t=>!['mis-pedidos','mi-perfil','productos-catalogo','diario'].includes(t.id));
   }
+  if(modo==='consumidor'&&tipoNegocio==='vinoteca'){
+    tabs=tabs.filter(t=>t.id!=='menu-platos');
+  }
   const bar=document.getElementById('tabs-bar');
   bar.innerHTML=tabs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}"${t.id==='mis-pedidos'?' id="tab-mis-pedidos"':''} onclick="showPage('${t.id}',this)">${t.label}${t.id==='mis-pedidos'?' <span id="badge-carrito" style="display:none;background:var(--garnet);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;margin-left:4px"></span>':''}</button>`).join('');
   showPage(tabs[0].id,bar.querySelector('.tab-btn'));
