@@ -658,8 +658,8 @@ async function preguntarSommelierConsumidor(){
   try{
     const vinos=await fetch(API+'/vinos').then(r=>r.json());
     if(!vinos.length){alert('Todavía no hay vinos cargados en el catálogo');return;}
-    const perfil=perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2};
-    const preferenciasGenerales=perfilGuardado?.maridaje?.length?perfilGuardado.maridaje.join(', '):'';
+    const perfil=tipoNegocio==='restaurante'?null:(perfilGuardado||{tanino:5,acidez:5,cuerpo:5,dulzor:2});
+    const preferenciasGenerales=tipoNegocio==='restaurante'?'':(perfilGuardado?.maridaje?.length?perfilGuardado.maridaje.join(', '):'');
     const r=await fetch(API+'/sommelier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perfil,contexto:pregunta,preferenciasGenerales,vinos})});
     const d=await r.json();
     if(!r.ok){alert(d.error||'No pudimos consultar al sommelier, probá de nuevo en unos minutos.');return;}

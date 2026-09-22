@@ -549,19 +549,26 @@ app.post('/api/sommelier', limiteSommelier, async (req, res) => {
   const { perfil, contexto, preferenciasGenerales, vinos } = req.body;
   if (!vinos || vinos.length === 0) return res.status(400).json({ error: 'Sin vinos' });
   registrarUsoSommelier('vino');
-  const p = perfil || { tanino: 5, acidez: 5, cuerpo: 5, dulzor: 5 };
+  const p = perfil || null;
 
   const fallback = () => {
-    const scored = vinos.map(v => {
-      const diff = Math.abs(v.tanino - p.tanino) + Math.abs(v.acidez - p.acidez) + Math.abs(v.cuerpo - p.cuerpo) + Math.abs(v.dulzor - p.dulzor);
-      return { ...v, match: Math.max(60, Math.round(100 - (diff / 40) * 100)) };
-    }).sort((a, b) => b.match - a.match);
-    const mejor = scored[0];
+    let elegido;
+    if (p) {
+      const scored = vinos.map(v => {
+        const diff = Math.abs(v.tanino - p.tanino) + Math.abs(v.acidez - p.acidez) + Math.abs(v.cuerpo - p.cuerpo) + Math.abs(v.dulzor - p.dulzor);
+        return { ...v, match: Math.max(60, Math.round(100 - (diff / 40) * 100)) };
+      }).sort((a, b) => b.match - a.match);
+      elegido = scored[0];
+    } else {
+      const disponibles = vinos.filter(v => (v.stock || 0) > 0);
+      const base = disponibles.length ? disponibles : vinos;
+      elegido = { ...base[Math.floor(Math.random() * base.length)], match: 75 };
+    }
     return {
-      vino_recomendado: mejor.nombre,
-      bodega: mejor.bodega,
-      match_porcentaje: mejor.match,
-      razon: mejor.descripcion || 'Buena opción de nuestro catálogo para tu perfil.',
+      vino_recomendado: elegido.nombre,
+      bodega: elegido.bodega,
+      match_porcentaje: elegido.match,
+      razon: elegido.descripcion || 'Buena opción de nuestro catálogo.',
       maridaje: ['Carnes rojas', 'Quesos maduros']
     };
   };
@@ -586,11 +593,11 @@ Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdo
 El campo "maridaje" tiene que ser un array de 2 a 3 sugerencias distintas y breves (por ejemplo ["Asado", "Quesos duros", "Picadas"]), no una sola frase larga.`;
 
     // Bloque DINÁMICO (perfil + pregunta puntual): cambia en cada consulta, va sin cachear.
-    const mensajeDinamico = `PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
+    const mensajeDinamico = `${p ? `PERFIL DE SABOR DEL CLIENTE (escala 1-10): tanino ${p.tanino}, acidez ${p.acidez}, cuerpo ${p.cuerpo}, dulzor ${p.dulzor}
 
-${preferenciasGenerales ? `PREFERENCIA GENERAL DEL CLIENTE (lo que suele tomar habitualmente, NO es el pedido de hoy): ${preferenciasGenerales}` : ''}
+` : ''}${preferenciasGenerales ? `PREFERENCIA GENERAL DEL CLIENTE (lo que suele tomar habitualmente, NO es el pedido de hoy): ${preferenciasGenerales}
 
-${contexto ? `LO QUE PIDE EL CLIENTE HOY, EN ESTE MOMENTO: "${contexto}"` : 'El cliente no dio un pedido específico para hoy, recomendá en base a su perfil de sabor y preferencia general.'}`;
+` : ''}${contexto ? `LO QUE PIDE EL CLIENTE HOY, EN ESTE MOMENTO: "${contexto}"` : (p ? 'El cliente no dio un pedido específico para hoy, recomendá en base a su perfil de sabor y preferencia general.' : 'El cliente no especificó qué va a comer. Recomendá 2-3 vinos versátiles y bien valorados del catálogo, variados entre sí.')}`;
 
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
