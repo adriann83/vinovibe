@@ -348,8 +348,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <!-- RECOMENDACIONES -->
 <div id="page-recomendaciones" class="page">
-  <div class="page-title">Mis Recomendaciones</div>
-  <div class="page-sub">Vinos seleccionados para tu perfil</div>
+  <div class="page-title" id="recomendaciones-titulo">Mis Recomendaciones</div>
+  <div class="page-sub" id="recomendaciones-subtitulo">Vinos seleccionados para tu perfil</div>
 
   <div class="card" style="margin-bottom:20px">
     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;margin-bottom:10px;color:var(--dark)">✦ Preguntale al Sommelier</div>
@@ -602,7 +602,7 @@ function showPage(id,btn){
   if(id==='pedidos')loadPedidos();
   if(id==='clientes')loadClientes();
   if(id==='mi-perfil')loadPerfil();
-  if(id==='recomendaciones')loadRecomendaciones();
+  if(id==='recomendaciones'&&tipoNegocio!=='restaurante')loadRecomendaciones();
   if(id==='catalogo')loadCatalogo();
   if(id==='productos-catalogo')loadProductosCatalogo();
   if(id==='bebidas-catalogo')loadBebidasCatalogo();
@@ -1542,6 +1542,10 @@ async function iniciarApp(){
     const hs=document.getElementById('hero-subtitulo');
     if(ht)ht.textContent='Bienvenido a nuestra carta de vinos';
     if(hs)hs.textContent='Descubrí nuestra selección de vinos y bebidas. Nuestro Sommelier IA te ayuda a elegir el maridaje perfecto para tu comida.';
+    const rt=document.getElementById('recomendaciones-titulo');
+    const rs=document.getElementById('recomendaciones-subtitulo');
+    if(rt)rt.textContent='Recomendaciones';
+    if(rs)rs.textContent='Preguntale al Sommelier qué vino va bien con tu comida';
   }
   renderTabs('consumidor');
   cargarBotonWhatsappFlotante(cfg);
