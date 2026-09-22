@@ -594,8 +594,9 @@ let tipoNegocio='vinoteca';
 
 function renderTabs(modo){
   let tabs=modo==='vinoteca'?tabsVinoteca:tabsConsumidor;
+  tabs=tabs.filter(t=>t.id!=='platos');
   if(tipoNegocio==='restaurante'){
-    if(modo==='vinoteca')tabs=tabs.filter(t=>t.id!=='pedidos'&&t.id!=='clientes');
+    if(modo==='vinoteca')tabs=tabs.filter(t=>t.id!=='pedidos'&&t.id!=='clientes'&&t.id!=='productos');
     else tabs=tabs.filter(t=>t.id!=='mis-pedidos');
   }
   const bar=document.getElementById('tabs-bar');
